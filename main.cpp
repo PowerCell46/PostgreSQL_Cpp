@@ -8,6 +8,9 @@
 #define DB_CONNECTION_STRING
 
 
+std::string repeat(const char& ch, const int& times);
+
+
 int main() {
     const char* userEnv = std::getenv("POSTGRE_SQL_ADMIN");
     const char* passEnv = std::getenv("POSTGRE_SQL_PASS");
@@ -25,6 +28,8 @@ int main() {
 
     PGconn *connection = PQconnectdb(connectionString.c_str());
 
+    /******************************************************************************************************************/
+
     if (PQstatus(connection) != CONNECTION_OK) {
         // Problem with the Connection
         std::cout << "Connection to database failed: " << PQerrorMessage(connection) << std::endl;
@@ -41,24 +46,40 @@ int main() {
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
 
     } else {
-        printf("Get %d has %d fields\n", PQntuples(queryResult), PQnfields(queryResult));
+        // printf("Get %d has %d fields\n", PQntuples(queryResult), PQnfields(queryResult));
 
+        int tableWidthChars = 1;
         // Print the Column Names
+        std::cout << "| ";
         for (int i = 0; i < PQnfields(queryResult); i++) {
-            printf("%s | ", PQfname(queryResult, i));
+            std::string currentColumnName{PQfname(queryResult, i)};
+            tableWidthChars += currentColumnName.size() + 3;
+            std::cout << currentColumnName << " | ";
         }
-        putchar('\n');
+        std::cout << '\n' << repeat('-', tableWidthChars) << '\n';
 
         // Print the entries in the Table
         for (int i = 0; i < PQntuples(queryResult); i++) {
             for (int j = 0; j < PQnfields(queryResult); j++) {
-                printf("%s | ", PQgetvalue(queryResult, i, j));
+                std::string currentValue{PQgetvalue(queryResult, i, j)};
+                std::cout << currentValue << " | ";
             }
-            putchar('\n');
+            std::cout << '\n';
         }
+        std::cout << repeat('-', tableWidthChars) << std::endl;
     }
 
     PQclear(queryResult);
 
     return 0;
+}
+
+
+std::string repeat(const char& ch, const int& times) {
+    std::stringstream strStream{};
+
+    for (int i = 0; i < times; ++i)
+        strStream << ch;
+
+    return strStream.str();
 }
