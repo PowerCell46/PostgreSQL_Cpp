@@ -48,6 +48,8 @@ int main() {
     } else {
         // printf("Get %d has %d fields\n", PQntuples(queryResult), PQnfields(queryResult));
 
+        // Initialize a vector(dynamic arr) for every column, calculate the max length of every col, and add a padding to the elements to be centered
+
         int tableWidthChars = 1;
         // Print the Column Names
         std::cout << "| ";
@@ -56,17 +58,18 @@ int main() {
             tableWidthChars += currentColumnName.size() + 3;
             std::cout << currentColumnName << " | ";
         }
-        std::cout << '\n' << repeat('-', tableWidthChars) << '\n';
+        std::cout << '\n' << '|' << repeat('_', tableWidthChars - 2) << '|' << '\n';
 
         // Print the entries in the Table
         for (int i = 0; i < PQntuples(queryResult); i++) {
+            std::cout << "| ";
             for (int j = 0; j < PQnfields(queryResult); j++) {
                 std::string currentValue{PQgetvalue(queryResult, i, j)};
                 std::cout << currentValue << " | ";
             }
-            std::cout << '\n';
+            std::cout << '\n' << '|' << repeat('.', tableWidthChars - 2) << '|' << '\n';
         }
-        std::cout << repeat('-', tableWidthChars) << std::endl;
+        std::cout << repeat('_', tableWidthChars) << std::endl;
     }
 
     PQclear(queryResult);
