@@ -7,8 +7,12 @@
 #define POSTGRE_SQL_DB_NAME std::string("working_project_db")
 #define DB_CONNECTION_STRING
 
+#define BETWEEN_ROWS_SEPARATOR '.'
+#define TABLE_ROW_SEPARATOR '-'
+#define TABLE_COL_SEPARATOR '|'
 
-std::string repeat(const char& ch, const int& times);
+
+std::string repeat(const char& ch, const std::string::size_type& times);
 
 
 int main() {
@@ -49,8 +53,9 @@ int main() {
         // printf("Get %d has %d fields\n", PQntuples(queryResult), PQnfields(queryResult));
 
         // Initialize a vector(dynamic arr) for every column, calculate the max length of every col, and add a padding to the elements to be centered
+        // Be careful with the even odd (how they will be positioned)
 
-        int tableWidthChars = 1;
+        std::string::size_type tableWidthChars = 1;
         // Print the Column Names
         std::cout << "| ";
         for (int i = 0; i < PQnfields(queryResult); i++) {
@@ -58,7 +63,7 @@ int main() {
             tableWidthChars += currentColumnName.size() + 3;
             std::cout << currentColumnName << " | ";
         }
-        std::cout << '\n' << '|' << repeat('_', tableWidthChars - 2) << '|' << '\n';
+        std::cout << '\n' << TABLE_COL_SEPARATOR << repeat(TABLE_ROW_SEPARATOR, tableWidthChars - 2) << TABLE_COL_SEPARATOR << '\n';
 
         // Print the entries in the Table
         for (int i = 0; i < PQntuples(queryResult); i++) {
@@ -67,9 +72,10 @@ int main() {
                 std::string currentValue{PQgetvalue(queryResult, i, j)};
                 std::cout << currentValue << " | ";
             }
-            std::cout << '\n' << '|' << repeat('.', tableWidthChars - 2) << '|' << '\n';
+            std::cout << '\n' << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, tableWidthChars - 2) << TABLE_COL_SEPARATOR << '\n';
+            // last one should be skipped
         }
-        std::cout << repeat('_', tableWidthChars) << std::endl;
+        std::cout << repeat(TABLE_ROW_SEPARATOR, tableWidthChars) << std::endl;
     }
 
     PQclear(queryResult);
@@ -78,7 +84,7 @@ int main() {
 }
 
 
-std::string repeat(const char& ch, const int& times) {
+std::string repeat(const char& ch, const std::string::size_type& times) {
     std::stringstream strStream{};
 
     for (int i = 0; i < times; ++i)
