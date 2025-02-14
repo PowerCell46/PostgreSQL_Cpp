@@ -1,41 +1,64 @@
 #include <iostream>
 #include <libpq-fe.h>
 #include <sstream>
+#include <cstdlib>
+
+#define POSTGRE_SQL_PORT std::string("5432")
+#define POSTGRE_SQL_DB_NAME std::string("working_project_db")
+#define DB_CONNECTION_STRING
+
 
 int main() {
-    const char conninfo[] = "postgresql://postgres@localhost?port=5432&dbname=postgres&user=postgres&password=root";
+    const char* userEnv = std::getenv("POSTGRE_SQL_ADMIN");
+    const char* passEnv = std::getenv("POSTGRE_SQL_PASS");
 
-    PGconn *conn = PQconnectdb(conninfo);
-
-    if (PQstatus(conn) != CONNECTION_OK) {
-        std::cout << "Connection to database failed: " << PQerrorMessage(conn) << std::endl;
-        PQfinish(conn);
+    if (userEnv == nullptr || passEnv == nullptr) {
+        std::cerr << "Error: Environment variables POSTGRE_SQL_ADMIN or POSTGRE_SQL_PASS are not set." << std::endl;
         return 1;
-    } else {
-        std::cout << "Connection to database succeed." << std::endl;
     }
 
-    PGresult *res = nullptr;
-    res = PQexec(conn, "SELECT * FROM pc;");
+    const std::string connectionString =
+            std::string("postgresql://localhost?port=") + POSTGRE_SQL_PORT +
+            std::string("&dbname=") + POSTGRE_SQL_DB_NAME +
+            std::string("&user=") + std::string(userEnv) +
+            std::string("&password=") + std::string(passEnv);
 
-    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+    PGconn *connection = PQconnectdb(connectionString.c_str());
+
+    if (PQstatus(connection) != CONNECTION_OK) {
+        // Problem with the Connection
+        std::cout << "Connection to database failed: " << PQerrorMessage(connection) << std::endl;
+
+        PQfinish(connection);
+        return 1;
+    }
+
+    PGresult *queryResult = nullptr;
+    queryResult = PQexec(connection, "SELECT * FROM pc;");
+
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) { // Not successful SQL query
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
-                __FILE__, __LINE__, PQresultErrorMessage(res));
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+
     } else {
-        printf("Get %d has %d fields\n", PQntuples(res), PQnfields(res));
-        /* print column name */
-        for (int i = 0; i < PQnfields(res); i++) {
-            printf("%s    ", PQfname(res, i));
+        printf("Get %d has %d fields\n", PQntuples(queryResult), PQnfields(queryResult));
+
+        // Print the Column Names
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            printf("%s | ", PQfname(queryResult, i));
         }
         putchar('\n');
-        /* print column values */
-        for (int i = 0; i < PQntuples(res); i++) {
-            for (int j = 0; j < PQnfields(res); j++) {
-                printf("%s    ", PQgetvalue(res, i, j));
+
+        // Print the entries in the Table
+        for (int i = 0; i < PQntuples(queryResult); i++) {
+            for (int j = 0; j < PQnfields(queryResult); j++) {
+                printf("%s | ", PQgetvalue(queryResult, i, j));
             }
             putchar('\n');
         }
     }
-    PQclear(res);
+
+    PQclear(queryResult);
+
     return 0;
 }
