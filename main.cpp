@@ -2,6 +2,7 @@
 #include <libpq-fe.h>
 #include <sstream>
 #include <cstdlib>
+#include <fstream>
 
 #define POSTGRE_SQL_PORT std::string("5432")
 #define POSTGRE_SQL_DB_NAME std::string("working_project_db")
@@ -13,6 +14,7 @@
 
 
 std::string repeat(const char& ch, const std::string::size_type& times);
+std::string addRightPadding(const std::string& valueStr, const std::string::size_type& size);
 
 
 int main() {
@@ -50,33 +52,53 @@ int main() {
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
 
     } else {
-        // printf("Get %d has %d fields\n", PQntuples(queryResult), PQnfields(queryResult));
+        std::ofstream fileStream{R"(C:\Programming\C++\PostgreSQL_Cpp\SQLresult.txt)"};
 
-        // Initialize a vector(dynamic arr) for every column, calculate the max length of every col, and add a padding to the elements to be centered
-        // Be careful with the even odd (how they will be positioned)
+        auto* columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
 
-        std::string::size_type tableWidthChars = 1;
         // Print the Column Names
-        std::cout << "| ";
         for (int i = 0; i < PQnfields(queryResult); i++) {
             std::string currentColumnName{PQfname(queryResult, i)};
-            tableWidthChars += currentColumnName.size() + 3;
-            std::cout << currentColumnName << " | ";
+            columnWidths[i] = currentColumnName.length();
         }
-        std::cout << '\n' << TABLE_COL_SEPARATOR << repeat(TABLE_ROW_SEPARATOR, tableWidthChars - 2) << TABLE_COL_SEPARATOR << '\n';
 
         // Print the entries in the Table
         for (int i = 0; i < PQntuples(queryResult); i++) {
-            std::cout << "| ";
             for (int j = 0; j < PQnfields(queryResult); j++) {
                 std::string currentValue{PQgetvalue(queryResult, i, j)};
-                std::cout << currentValue << " | ";
+                columnWidths[j] = std::max(columnWidths[j], currentValue.length());
             }
-            std::cout << '\n' << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, tableWidthChars - 2) << TABLE_COL_SEPARATOR << '\n';
-            // last one should be skipped
         }
-        std::cout << repeat(TABLE_ROW_SEPARATOR, tableWidthChars) << std::endl;
+
+        std::string::size_type totalSymbolsSize = 1;
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            totalSymbolsSize += columnWidths[i] + 2;
+        }
+        std::cout << totalSymbolsSize << '\n';
+
+        fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n' << TABLE_COL_SEPARATOR;
+
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            std::string currentColumnName{PQfname(queryResult, i)};
+            fileStream << addRightPadding(currentColumnName, columnWidths[i]) << " |";
+        }
+
+        fileStream << '\n' << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) << TABLE_COL_SEPARATOR << '\n' << TABLE_COL_SEPARATOR;
+
+        for (int i = 0; i < PQntuples(queryResult); i++) {
+            for (int j = 0; j < PQnfields(queryResult); j++) {
+                std::string currentValue{PQgetvalue(queryResult, i, j)};
+                fileStream << addRightPadding(currentValue, columnWidths[j]) << " |";
+            }
+            fileStream << '\n' << TABLE_COL_SEPARATOR;
+        }
+        fileStream << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) << TABLE_COL_SEPARATOR << '\n';
+
+        delete columnWidths;
+        fileStream.close();
     }
+
+
 
     PQclear(queryResult);
 
@@ -91,4 +113,17 @@ std::string repeat(const char& ch, const std::string::size_type& times) {
         strStream << ch;
 
     return strStream.str();
+}
+
+
+std::string addRightPadding(const std::string& valueStr, const std::string::size_type& size) {
+    if (valueStr.length() == size)
+        return valueStr;
+
+    std::stringstream resultStream{};
+    resultStream << valueStr;
+    for (int i = 0; i < size - valueStr.length(); ++i)
+        resultStream << ' ';
+
+    return resultStream.str();
 }
