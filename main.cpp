@@ -56,7 +56,7 @@ int main() {
     }
 
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-// #if 0
+#if 0
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
@@ -121,38 +121,38 @@ int main() {
     }
 
     PQclear(queryResult);
-// #endif
+#endif
 
-#if 0
+// #if 0
     std::string brand, model, processor, storageType, gpu, purchaseDate;
     int ramSize, storageSize;
     double price;
 
-    std::cout << "Enter brand: ";
+    std::cout << "Enter brand:";
     std::cin >> brand;
 
-    std::cout << "Enter model: ";
+    std::cout << "Enter model:";
     std::cin >> model;
 
-    std::cout << "Enter processor: ";
+    std::cout << "Enter processor:";
     std::cin >> processor;
 
-    std::cout << "Enter RAM size: ";
+    std::cout << "Enter RAM size:";
     std::cin >> ramSize;
 
-    std::cout << "Enter Storage size: ";
+    std::cout << "Enter Storage size:";
     std::cin >> storageSize;
 
-    std::cout << "Enter Storage type: ";
+    std::cout << "Enter Storage type:";
     std::cin >> storageType;
 
-    std::cout << "Enter GPU: ";
+    std::cout << "Enter GPU:";
     std::cin >> gpu;
 
-    std::cout << "Enter price: ";
+    std::cout << "Enter price:";
     std::cin >> price;
 
-    std::cout << "Enter purchase date: ";
+    std::cout << "Enter purchase date:";
     std::cin >> purchaseDate;
 
     // Parameterized query
@@ -174,13 +174,14 @@ int main() {
 
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         std::cerr << "INSERT failed: " << PQresultErrorMessage(res) << std::endl;
+
     } else {
         std::cout << "Record inserted successfully!" << std::endl;
     }
 
     PQclear(res);
     PQfinish(connection);
-#endif
+// #endif
 
     return 0;
 }
