@@ -13,13 +13,14 @@
 #define TABLE_COL_SEPARATOR '|'
 
 
-std::string repeat(const char& ch, const std::string::size_type& times);
-std::string addRightPadding(const std::string& valueStr, const std::string::size_type& size);
+std::string repeat(const char &ch, const std::string::size_type &times);
+
+std::string addRightPadding(const std::string &valueStr, const std::string::size_type &size);
 
 
 int main() {
-    const char* userEnv = std::getenv("POSTGRE_SQL_ADMIN");
-    const char* passEnv = std::getenv("POSTGRE_SQL_PASS");
+    const char *userEnv = std::getenv("POSTGRE_SQL_ADMIN");
+    const char *passEnv = std::getenv("POSTGRE_SQL_PASS");
 
     if (userEnv == nullptr || passEnv == nullptr) {
         std::cerr << "Error: Environment variables POSTGRE_SQL_ADMIN or POSTGRE_SQL_PASS are not set." << std::endl;
@@ -47,22 +48,20 @@ int main() {
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) { // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
-
     } else {
         std::ofstream fileStream{R"(C:\Programming\C++\PostgreSQL_Cpp\SQLresult.txt)"};
 
-        auto* columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
+        auto *columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
 
-        // Print the Column Names
         for (int i = 0; i < PQnfields(queryResult); i++) {
             std::string currentColumnName{PQfname(queryResult, i)};
             columnWidths[i] = currentColumnName.length();
         }
 
-        // Print the entries in the Table
         for (int i = 0; i < PQntuples(queryResult); i++) {
             for (int j = 0; j < PQnfields(queryResult); j++) {
                 std::string currentValue{PQgetvalue(queryResult, i, j)};
@@ -76,6 +75,7 @@ int main() {
         }
         std::cout << totalSymbolsSize << '\n';
 
+
         fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n' << TABLE_COL_SEPARATOR;
 
         for (int i = 0; i < PQnfields(queryResult); i++) {
@@ -83,21 +83,24 @@ int main() {
             fileStream << addRightPadding(currentColumnName, columnWidths[i]) << " |";
         }
 
-        fileStream << '\n' << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) << TABLE_COL_SEPARATOR << '\n' << TABLE_COL_SEPARATOR;
+        fileStream << '\n' << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) <<
+                TABLE_COL_SEPARATOR << '\n' << TABLE_COL_SEPARATOR;
 
         for (int i = 0; i < PQntuples(queryResult); i++) {
             for (int j = 0; j < PQnfields(queryResult); j++) {
                 std::string currentValue{PQgetvalue(queryResult, i, j)};
                 fileStream << addRightPadding(currentValue, columnWidths[j]) << " |";
             }
-            fileStream << '\n' << TABLE_COL_SEPARATOR;
+            fileStream << '\n' << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) << TABLE_COL_SEPARATOR << '\n' << TABLE_COL_SEPARATOR;
+            // fileStream << '\n' << TABLE_COL_SEPARATOR;
         }
-        fileStream << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) << TABLE_COL_SEPARATOR << '\n';
+        // fileStream
+        //         << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) << TABLE_COL_SEPARATOR << '\n'
+        //         << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize);
 
         delete columnWidths;
         fileStream.close();
     }
-
 
 
     PQclear(queryResult);
@@ -106,7 +109,7 @@ int main() {
 }
 
 
-std::string repeat(const char& ch, const std::string::size_type& times) {
+std::string repeat(const char &ch, const std::string::size_type &times) {
     std::stringstream strStream{};
 
     for (int i = 0; i < times; ++i)
@@ -116,7 +119,7 @@ std::string repeat(const char& ch, const std::string::size_type& times) {
 }
 
 
-std::string addRightPadding(const std::string& valueStr, const std::string::size_type& size) {
+std::string addRightPadding(const std::string &valueStr, const std::string::size_type &size) {
     if (valueStr.length() == size)
         return valueStr;
 
