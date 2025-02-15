@@ -63,7 +63,7 @@ int main() {
 
     // SELECT * FROM pc;
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-// #if 0
+#if 0
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
@@ -128,7 +128,7 @@ int main() {
     }
 
     PQclear(queryResult);
-// #endif
+#endif
 
     // INSERT INTO pc;
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
@@ -242,16 +242,15 @@ int main() {
         const char* paramValues[1];
         std::string deleteByColumn, deleteValue{};
 
-        std::cout << "Enter EXACT name of the column by you wish to delete:";
-        std::cin >> deleteByColumn;
+        std::cout << "Enter EXACT name of the column by you wish to delete:"; // Prompt the user to enter delete column
+        std::cin >> deleteByColumn; // Read the delete column
 
         for (int i = 0; i < PQnfields(queryResult); i++) {
-            std::string currentColumnName{PQfname(queryResult, i)};
+            const std::string currentColumnName{PQfname(queryResult, i)};
 
             if (currentColumnName == deleteByColumn) {
                 switch (PQftype(queryResult, i)) {
-                    case 1043: {
-                        // VARCHAR
+                    case 1043: { // VARCHAR
                         if (std::cin.peek() == '\n')
                             std::cin.ignore();
 
@@ -263,35 +262,29 @@ int main() {
                         deleteValue = currentValue;
                         break;
                     }
-                    case 23: {
-                        // INT4
+                    case 23: { // INT4
                         int currentValue;
 
                         std::cout << "Enter " << currentColumnName << " value:";
-
                         std::cin >> currentValue;
 
                         deleteValue = std::to_string(currentValue);
                         break;
                     }
-                    case 1700: {
-                        // DECIMAL, NUMERIC
+                    case 1700: { // DECIMAL, NUMERIC
                         double currentValue;
 
                         std::cout << "Enter " << currentColumnName << " value:";
-
                         std::cin >> currentValue;
 
                         deleteValue = std::to_string(currentValue);
                         break;
                     }
-                    case 1082: {
-                        // DATE
+                    case 1082: { // DATE
                         // TODO: VALIDATE THE DATE FORMAT yyyy-MM-dd
                         std::string currentValue;
 
                         std::cout << "Enter " << currentColumnName << " value:";
-
                         std::cin >> currentValue;
 
                         deleteValue = currentValue;
@@ -301,16 +294,17 @@ int main() {
                         // TODO: add other type cases or write default behaviour
                     }
                 }
+                break;
             }
         }
 
         if (deleteValue.empty()) {
-            std::cout << "no such column found!";
+            std::cout << "No column found with name " << deleteByColumn << "!";
             return 0;
         }
 
         paramValues[0] = deleteValue.c_str();
-        std::string deleteQuery = std::string("DELETE FROM pc WHERE ") + deleteByColumn + std::string(" = $1;");
+        const std::string deleteQuery = std::string("DELETE FROM pc WHERE ") + deleteByColumn + std::string(" = $1;");
 
         PGresult *deleteResult = PQexecParams(
             connection,
