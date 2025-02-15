@@ -11,21 +11,28 @@
 #define BETWEEN_ROWS_SEPARATOR '.'
 #define TABLE_ROW_SEPARATOR '-'
 #define TABLE_COL_SEPARATOR '|'
+#define END_OF_COL_SEPARATOR " |"
 
 
-std::string repeat(const char &ch, const std::string::size_type &times);
+std::string repeat(const char&, const std::string::size_type&);
 
-std::string addRightPadding(const std::string &valueStr, const std::string::size_type &size);
+std::string addRightPadding(const std::string&, const std::string::size_type&);
 
-std::string createBetweenRowsRow(const std::string::size_type* columnWidths, const int& colWidthsSize);
+std::string createBetweenRowsRow(const std::string::size_type*, const int&);
 
 
 int main() {
     const char *userEnv = std::getenv("POSTGRE_SQL_ADMIN");
     const char *passEnv = std::getenv("POSTGRE_SQL_PASS");
+    const char *outputFileNameEnv = std::getenv("OUTPUT_FILE");
 
     if (userEnv == nullptr || passEnv == nullptr) {
         std::cerr << "Error: Environment variables POSTGRE_SQL_ADMIN or POSTGRE_SQL_PASS are not set." << std::endl;
+        return 1;
+    }
+
+    if (outputFileNameEnv == nullptr) {
+        std::cerr << "Error: Environment variable OUTPUT_FILE is not set." << std::endl;
         return 1;
     }
 
@@ -50,12 +57,12 @@ int main() {
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) { // Not successful SQL query
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+
     } else {
-        std::ofstream fileStream{R"(C:\Programming\C++\PostgreSQL_Cpp\SQLresult.txt)"};
+        std::ofstream fileStream{outputFileNameEnv};
 
         auto *columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
 
@@ -79,14 +86,14 @@ int main() {
             totalSymbolsSize += columnWidths[i] + 2;
         }
 
-        // Print the table head
+        // Print the table Head
         fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n' << TABLE_COL_SEPARATOR;
 
 
         // Print the table Column names
         for (int i = 0; i < PQnfields(queryResult); i++) {
             std::string currentColumnName{PQfname(queryResult, i)};
-            fileStream << addRightPadding(currentColumnName, columnWidths[i]) << " |";
+            fileStream << addRightPadding(currentColumnName, columnWidths[i]) << END_OF_COL_SEPARATOR;
         }
 
         // Print the first in between row
@@ -97,7 +104,7 @@ int main() {
             for (int j = 0; j < PQnfields(queryResult); j++) {
                 std::string currentValue{PQgetvalue(queryResult, i, j)};
                 // Print the current row
-                fileStream << addRightPadding(currentValue, columnWidths[j]) << " |";
+                fileStream << addRightPadding(currentValue, columnWidths[j]) << END_OF_COL_SEPARATOR;
             }
             // Print the in between row
             fileStream << '\n' << createBetweenRowsRow(columnWidths, PQnfields(queryResult)) << '\n';
@@ -132,6 +139,7 @@ std::string addRightPadding(const std::string &valueStr, const std::string::size
 
     std::stringstream resultStream{};
     resultStream << valueStr;
+
     for (int i = 0; i < size - valueStr.length(); ++i)
         resultStream << ' ';
 
@@ -142,6 +150,7 @@ std::string addRightPadding(const std::string &valueStr, const std::string::size
 std::string createBetweenRowsRow(const std::string::size_type* columnWidths, const int& colWidthsSize) {
     std::stringstream resultStream{};
     resultStream << TABLE_COL_SEPARATOR;
+
     for (int i = 0; i < colWidthsSize; ++i)
         resultStream << repeat(BETWEEN_ROWS_SEPARATOR, columnWidths[i] + 1) << TABLE_COL_SEPARATOR;
 
