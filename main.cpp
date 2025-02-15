@@ -27,6 +27,8 @@ std::string join(const std::string *, const int &, const std::string &);
 
 std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &);
 
+bool isSqlDateFormatValid(const std::string &);
+
 
 int main() {
     const char *userEnv = std::getenv("POSTGRE_SQL_ADMIN");
@@ -61,6 +63,7 @@ int main() {
         return 1;
     }
 
+    /******************************************************************************************************************/
     // SELECT * FROM pc;
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
 #if 0
@@ -130,22 +133,24 @@ int main() {
     PQclear(queryResult);
 #endif
 
+    /******************************************************************************************************************/
     // INSERT INTO pc;
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if 0
+    #if 0
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) { // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
-
     } else {
         auto *tableNames = new std::string[PQnfields(queryResult)]{}; // Dynamic arr with the table names
         std::vector<std::string> insertValues; // Vector with the values
         bool skipId = false;
 
-        for (int i = 0; i < PQnfields(queryResult); i++) { // Read the column value and keep it
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            // Read the column value and keep it
             std::string currentColumnName{PQfname(queryResult, i)};
             if (currentColumnName == "id") {
                 skipId = true;
@@ -153,10 +158,12 @@ int main() {
             }
             tableNames[i] = currentColumnName; // Add the column name to the arr
 
-            std::cout << "Enter " << currentColumnName << ':'; // Ask the user for input
+            std::cout << "Enter " << currentColumnName << ':'; // Prompt the user for input
 
             switch (PQftype(queryResult, i)) {
-                case 1043: { // VARCHAR
+                // Read different data types
+                case 1043: {
+                    // VARCHAR
                     if (std::cin.peek() == '\n')
                         std::cin.ignore();
 
@@ -166,26 +173,32 @@ int main() {
                     insertValues.push_back(currentValue);
                     break;
                 }
-                case 23: { // INT4
+                case 23: {
+                    // INT4
                     int currentValue;
                     std::cin >> currentValue;
 
                     insertValues.push_back(std::to_string(currentValue));
                     break;
                 }
-                case 1700: { // DECIMAL, NUMERIC
+                case 1700: {
+                    // DECIMAL, NUMERIC
                     double currentValue;
                     std::cin >> currentValue;
 
                     insertValues.push_back(std::to_string(currentValue));
                     break;
                 }
-                case 1082: { // DATE
+                case 1082: {
+                    // DATE
                     // TODO: VALIDATE THE DATE FORMAT yyyy-MM-dd
                     std::string currentValue;
                     std::cin >> currentValue;
 
-                    insertValues.push_back(currentValue);
+                    if (isSqlDateFormatValid(currentValue))
+                        insertValues.push_back(currentValue);
+                    else
+                        std::cout << "Invalid date entered!"; // TODO: No value added ATM to the insert request
                     break;
                 }
                 default: {
@@ -209,12 +222,19 @@ int main() {
 
         std::cout << insertQueryStream.str() << "\n";
 
-        PGresult *insertResult = PQexecParams(connection, insertQueryStream.str().c_str(),
-                                     PQnfields(queryResult) - (skipId ? 1 : 0), NULL,
-                                     generateInsertParamValues(insertValues).data(),
-                                     NULL, NULL, 0);
+        PGresult *insertResult = PQexecParams(
+            connection,
+            insertQueryStream.str().c_str(),
+            PQnfields(queryResult) - (skipId ? 1 : 0),
+            NULL,
+            generateInsertParamValues(insertValues).data(),
+            NULL,
+            NULL,
+            0
+        );
 
-        if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) { // Problem with the Insertion of data
+        if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) {
+            // Problem with the Insertion of data
             std::cerr << "INSERT failed: " << PQresultErrorMessage(insertResult) << std::endl;
 
         } else {
@@ -225,8 +245,9 @@ int main() {
     }
 
     PQfinish(connection);
-#endif
+    #endif
 
+    /******************************************************************************************************************/
     // DELETE FROM pc;
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
 #if 0
@@ -243,20 +264,20 @@ int main() {
         std::string deleteByColumn, deleteValue{};
 
         std::cout << "Enter EXACT name of the column by you wish to delete:"; // Prompt the user to enter delete column
-        std::cin >> deleteByColumn; // Read the delete column
+        std::cin >> deleteByColumn; // Read the delete by column
 
         for (int i = 0; i < PQnfields(queryResult); i++) {
             const std::string currentColumnName{PQfname(queryResult, i)};
 
-            if (currentColumnName == deleteByColumn) {
+            if (currentColumnName == deleteByColumn) { // Read different type of data type
+                std::cout << "Enter " << currentColumnName << " value:";
+
                 switch (PQftype(queryResult, i)) {
                     case 1043: { // VARCHAR
+                        std::string currentValue;
+
                         if (std::cin.peek() == '\n')
                             std::cin.ignore();
-
-                        std::cout << "Enter " << currentColumnName << " value:";
-
-                        std::string currentValue;
                         std::getline(std::cin, currentValue);
 
                         deleteValue = currentValue;
@@ -264,8 +285,6 @@ int main() {
                     }
                     case 23: { // INT4
                         int currentValue;
-
-                        std::cout << "Enter " << currentColumnName << " value:";
                         std::cin >> currentValue;
 
                         deleteValue = std::to_string(currentValue);
@@ -273,21 +292,19 @@ int main() {
                     }
                     case 1700: { // DECIMAL, NUMERIC
                         double currentValue;
-
-                        std::cout << "Enter " << currentColumnName << " value:";
                         std::cin >> currentValue;
 
                         deleteValue = std::to_string(currentValue);
                         break;
                     }
                     case 1082: { // DATE
-                        // TODO: VALIDATE THE DATE FORMAT yyyy-MM-dd
                         std::string currentValue;
-
-                        std::cout << "Enter " << currentColumnName << " value:";
                         std::cin >> currentValue;
 
-                        deleteValue = currentValue;
+                        if (isSqlDateFormatValid(currentValue))
+                            deleteValue = currentValue;
+                        else
+                            // TODO: nothing happens ATM
                         break;
                     }
                     default: {
@@ -393,4 +410,21 @@ std::vector<const char *> generateInsertParamValues(const std::vector<std::strin
         paramValues.push_back(value.c_str());
 
     return paramValues;
+}
+
+
+bool isSqlDateFormatValid(const std::string &dateStr) {
+    if (dateStr.length() != 10)
+        return false;
+
+    return
+            dateStr[4] == '-' && dateStr[7] == '-'
+            && dateStr[0] >= '0' && dateStr[0] <= '9'
+            && dateStr[1] >= '0' && dateStr[1] <= '9'
+            && dateStr[2] >= '0' && dateStr[2] <= '9'
+            && dateStr[3] >= '0' && dateStr[3] <= '9'
+            && dateStr[5] >= '0' && dateStr[5] <= '9'
+            && dateStr[6] >= '0' && dateStr[6] <= '9'
+            && dateStr[8] >= '0' && dateStr[8] <= '9'
+            && dateStr[9] >= '0' && dateStr[9] <= '9';
 }
