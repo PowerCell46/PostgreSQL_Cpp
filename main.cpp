@@ -17,6 +17,8 @@ std::string repeat(const char &ch, const std::string::size_type &times);
 
 std::string addRightPadding(const std::string &valueStr, const std::string::size_type &size);
 
+std::string createBetweenRowsRow(const std::string::size_type* columnWidths, const int& colWidthsSize);
+
 
 int main() {
     const char *userEnv = std::getenv("POSTGRE_SQL_ADMIN");
@@ -57,11 +59,13 @@ int main() {
 
         auto *columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
 
+        // Calculate the width of every column (table col names)
         for (int i = 0; i < PQnfields(queryResult); i++) {
             std::string currentColumnName{PQfname(queryResult, i)};
             columnWidths[i] = currentColumnName.length();
         }
 
+        // Calculate the width of every column (table row cols)
         for (int i = 0; i < PQntuples(queryResult); i++) {
             for (int j = 0; j < PQnfields(queryResult); j++) {
                 std::string currentValue{PQgetvalue(queryResult, i, j)};
@@ -69,39 +73,42 @@ int main() {
             }
         }
 
+        // Calculate the total char number for a row
         std::string::size_type totalSymbolsSize = 1;
         for (int i = 0; i < PQnfields(queryResult); i++) {
             totalSymbolsSize += columnWidths[i] + 2;
         }
-        std::cout << totalSymbolsSize << '\n';
 
-
+        // Print the table head
         fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n' << TABLE_COL_SEPARATOR;
 
+
+        // Print the table Column names
         for (int i = 0; i < PQnfields(queryResult); i++) {
             std::string currentColumnName{PQfname(queryResult, i)};
             fileStream << addRightPadding(currentColumnName, columnWidths[i]) << " |";
         }
 
-        fileStream << '\n' << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) <<
-                TABLE_COL_SEPARATOR << '\n' << TABLE_COL_SEPARATOR;
+        // Print the first in between row
+        fileStream << '\n' << createBetweenRowsRow(columnWidths, PQnfields(queryResult)) << '\n';
 
         for (int i = 0; i < PQntuples(queryResult); i++) {
+            fileStream << TABLE_COL_SEPARATOR;
             for (int j = 0; j < PQnfields(queryResult); j++) {
                 std::string currentValue{PQgetvalue(queryResult, i, j)};
+                // Print the current row
                 fileStream << addRightPadding(currentValue, columnWidths[j]) << " |";
             }
-            fileStream << '\n' << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) << TABLE_COL_SEPARATOR << '\n' << TABLE_COL_SEPARATOR;
-            // fileStream << '\n' << TABLE_COL_SEPARATOR;
+            // Print the in between row
+            fileStream << '\n' << createBetweenRowsRow(columnWidths, PQnfields(queryResult)) << '\n';
         }
-        // fileStream
-        //         << repeat(BETWEEN_ROWS_SEPARATOR, totalSymbolsSize - 2) << TABLE_COL_SEPARATOR << '\n'
-        //         << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize);
+
+        // Print the table tail
+        fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n';
 
         delete columnWidths;
         fileStream.close();
     }
-
 
     PQclear(queryResult);
 
@@ -127,6 +134,16 @@ std::string addRightPadding(const std::string &valueStr, const std::string::size
     resultStream << valueStr;
     for (int i = 0; i < size - valueStr.length(); ++i)
         resultStream << ' ';
+
+    return resultStream.str();
+}
+
+
+std::string createBetweenRowsRow(const std::string::size_type* columnWidths, const int& colWidthsSize) {
+    std::stringstream resultStream{};
+    resultStream << TABLE_COL_SEPARATOR;
+    for (int i = 0; i < colWidthsSize; ++i)
+        resultStream << repeat(BETWEEN_ROWS_SEPARATOR, columnWidths[i] + 1) << TABLE_COL_SEPARATOR;
 
     return resultStream.str();
 }
