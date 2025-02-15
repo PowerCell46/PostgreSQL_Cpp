@@ -25,7 +25,7 @@ std::string createBetweenRowsRow(const std::string::size_type *, const int &);
 
 std::string join(const std::string *, const int &, const std::string &);
 
-std::vector<const char*> generateInsertParamValues(const std::vector<std::string> &);
+std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &);
 
 
 int main() {
@@ -61,8 +61,9 @@ int main() {
         return 1;
     }
 
+    // SELECT * FROM pc;
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if 0
+// #if 0
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
@@ -127,8 +128,9 @@ int main() {
     }
 
     PQclear(queryResult);
-#endif
+// #endif
 
+    // INSERT INTO pc;
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
 #if 0
     PGresult *queryResult = nullptr;
@@ -223,7 +225,115 @@ int main() {
     }
 
     PQfinish(connection);
-    #endif
+#endif
+
+    // DELETE FROM pc;
+    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
+#if 0
+    PGresult *queryResult = nullptr;
+    queryResult = PQexec(connection, "SELECT * FROM pc;");
+
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
+        fprintf(stderr, "%s[%d]: Select failed: %s\n",
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+
+    } else {
+        const char* paramValues[1];
+        std::string deleteByColumn, deleteValue{};
+
+        std::cout << "Enter EXACT name of the column by you wish to delete:";
+        std::cin >> deleteByColumn;
+
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            std::string currentColumnName{PQfname(queryResult, i)};
+
+            if (currentColumnName == deleteByColumn) {
+                switch (PQftype(queryResult, i)) {
+                    case 1043: {
+                        // VARCHAR
+                        if (std::cin.peek() == '\n')
+                            std::cin.ignore();
+
+                        std::cout << "Enter " << currentColumnName << " value:";
+
+                        std::string currentValue;
+                        std::getline(std::cin, currentValue);
+
+                        deleteValue = currentValue;
+                        break;
+                    }
+                    case 23: {
+                        // INT4
+                        int currentValue;
+
+                        std::cout << "Enter " << currentColumnName << " value:";
+
+                        std::cin >> currentValue;
+
+                        deleteValue = std::to_string(currentValue);
+                        break;
+                    }
+                    case 1700: {
+                        // DECIMAL, NUMERIC
+                        double currentValue;
+
+                        std::cout << "Enter " << currentColumnName << " value:";
+
+                        std::cin >> currentValue;
+
+                        deleteValue = std::to_string(currentValue);
+                        break;
+                    }
+                    case 1082: {
+                        // DATE
+                        // TODO: VALIDATE THE DATE FORMAT yyyy-MM-dd
+                        std::string currentValue;
+
+                        std::cout << "Enter " << currentColumnName << " value:";
+
+                        std::cin >> currentValue;
+
+                        deleteValue = currentValue;
+                        break;
+                    }
+                    default: {
+                        // TODO: add other type cases or write default behaviour
+                    }
+                }
+            }
+        }
+
+        if (deleteValue.empty()) {
+            std::cout << "no such column found!";
+            return 0;
+        }
+
+        paramValues[0] = deleteValue.c_str();
+        std::string deleteQuery = std::string("DELETE FROM pc WHERE ") + deleteByColumn + std::string(" = $1;");
+
+        PGresult *deleteResult = PQexecParams(
+            connection,
+            deleteQuery.c_str(),
+            1, // Number of parameters
+            NULL, // Parameter types (NULL = infer from query)
+            paramValues, // Parameter values
+            NULL, // Parameter lengths (NULL = assume text)
+            NULL, // Parameter formats (NULL = assume text)
+            0 // Result format: 0 for text, 1 for binary
+        );
+
+        if (PQresultStatus(deleteResult) != PGRES_COMMAND_OK) {
+            std::cerr << "DELETE failed: " << PQerrorMessage(connection) << std::endl;
+
+        } else {
+            std::cout << "Record deleted successfully.\n";
+        }
+
+        PQclear(deleteResult);
+
+    }
+#endif
 
     return 0;
 }
@@ -281,11 +391,11 @@ std::string join(const std::string *elements, const int &size, const std::string
 }
 
 
-std::vector<const char*> generateInsertParamValues(const std::vector<std::string> &insertValues) {
-    std::vector<const char*> paramValues;
+std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &insertValues) {
+    std::vector<const char *> paramValues;
     paramValues.reserve(insertValues.size());
 
-    for (const auto &value : insertValues)
+    for (const auto &value: insertValues)
         paramValues.push_back(value.c_str());
 
     return paramValues;
