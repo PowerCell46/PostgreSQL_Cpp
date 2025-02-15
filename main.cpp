@@ -1,8 +1,11 @@
 #include <iostream>
 #include <libpq-fe.h>
-#include <sstream>
 #include <cstdlib>
 #include <fstream>
+#include <sstream>
+#include <vector>
+#include <limits>
+
 
 #define POSTGRE_SQL_PORT std::string("5432")
 #define POSTGRE_SQL_DB_NAME std::string("working_project_db")
@@ -20,6 +23,10 @@ std::string repeat(const char &, const std::string::size_type &);
 std::string addRightPadding(const std::string &, const std::string::size_type &);
 
 std::string createBetweenRowsRow(const std::string::size_type *, const int &);
+
+std::string join(const std::string *, const int &, const std::string &);
+
+std::vector<const char*> generateInsertParamValues(const std::vector<std::string> &insertValues);
 
 
 int main() {
@@ -56,7 +63,7 @@ int main() {
     }
 
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if 0
+// #if 0
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
@@ -121,67 +128,104 @@ int main() {
     }
 
     PQclear(queryResult);
-#endif
+// #endif
 
-// #if 0
-    std::string brand, model, processor, storageType, gpu, purchaseDate;
-    int ramSize, storageSize;
-    double price;
+    #if 0
+    PGresult *queryResult = nullptr;
+    queryResult = PQexec(connection, "SELECT * FROM pc;");
 
-    std::cout << "Enter brand:";
-    std::cin >> brand;
-
-    std::cout << "Enter model:";
-    std::cin >> model;
-
-    std::cout << "Enter processor:";
-    std::cin >> processor;
-
-    std::cout << "Enter RAM size:";
-    std::cin >> ramSize;
-
-    std::cout << "Enter Storage size:";
-    std::cin >> storageSize;
-
-    std::cout << "Enter Storage type:";
-    std::cin >> storageType;
-
-    std::cout << "Enter GPU:";
-    std::cin >> gpu;
-
-    std::cout << "Enter price:";
-    std::cin >> price;
-
-    std::cout << "Enter purchase date:";
-    std::cin >> purchaseDate;
-
-    // Parameterized query
-    const char *paramValues[] = {
-        brand.c_str(), model.c_str(),
-        processor.c_str(), std::to_string(ramSize).c_str(),
-        std::to_string(storageSize).c_str(), storageType.c_str(), gpu.c_str(),
-        std::to_string(price).c_str(), purchaseDate.c_str()
-    };
-
-    PGresult *res = PQexecParams(connection,
-                                 "INSERT INTO pc (brand, model, processor, ram_size, storage_size, storage_type, gpu, price, purchase_date) "
-                                 "VALUES ($1, $2, $3, $4::int, $5::int, $6, $7, $8::float, $9::date);",
-                                 9, // Number of parameters
-                                 NULL, // Let PostgreSQL infer parameter types
-                                 paramValues,
-                                 NULL, NULL, 0 // No binary format
-    );
-
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        std::cerr << "INSERT failed: " << PQresultErrorMessage(res) << std::endl;
-
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
+        fprintf(stderr, "%s[%d]: Select failed: %s\n",
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
     } else {
-        std::cout << "Record inserted successfully!" << std::endl;
+        auto *tableNames = new std::string[PQnfields(queryResult)]{}; // Dynamic arr with the table names
+        std::vector<std::string> insertValues; // Vector with the values
+        bool skipId = false;
+
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            // Read the column value and keep it
+            std::string currentColumnName{PQfname(queryResult, i)};
+            if (currentColumnName == "id") {
+                skipId = true;
+                continue;
+            }
+            tableNames[i] = currentColumnName;
+
+            std::cout << "Enter " << currentColumnName << ':';
+
+            switch (PQftype(queryResult, i)) {
+                case 1043: {
+                    // VARCHAR
+                    if (std::cin.peek() == '\n') std::cin.ignore();
+                    std::string currentValue;
+                    std::getline(std::cin, currentValue);
+
+                    insertValues.push_back(currentValue);
+                    break;
+                }
+                case 23: {
+                    // INT4
+                    int currentValue;
+                    std::cin >> currentValue;
+
+                    insertValues.push_back(std::to_string(currentValue));
+                    break;
+                }
+                case 1700: {
+                    // DECIMAL, NUMERIC
+                    double currentValue;
+                    std::cin >> currentValue;
+
+                    insertValues.push_back(std::to_string(currentValue));
+                    break;
+                }
+                case 1082: {
+                    // DATE
+                    // TODO: VALIDATE THE DATE FORMAT yyyy-MM-dd
+                    std::string currentValue;
+                    std::cin >> currentValue;
+
+                    insertValues.push_back(currentValue);
+                    break;
+                }
+                default: {
+                    // TODO: add other cases or write default behaviour
+                }
+            }
+        }
+
+        std::stringstream insertQueryStream{}; // Start to build the query
+        insertQueryStream << "INSERT INTO pc (" << join(tableNames, PQnfields(queryResult), ", ") << ") VALUES (";
+
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            if (skipId && i == 0)
+                continue;
+
+            insertQueryStream << '$' << (skipId ? i : i + 1);
+            if (i < PQnfields(queryResult) - 1)
+                insertQueryStream << ", ";
+        }
+        insertQueryStream << ");";
+
+        std::cout << insertQueryStream.str() << "\n";
+
+        PGresult *res = PQexecParams(connection, insertQueryStream.str().c_str(),
+                                     PQnfields(queryResult) - (skipId ? 1 : 0), NULL,
+                                     generateInsertParamValues(insertValues).data(),
+                                     NULL, NULL, 0);
+
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            std::cerr << "INSERT failed: " << PQresultErrorMessage(res) << std::endl;
+        } else {
+            std::cout << "Record inserted successfully into " << "pc" << "!" << std::endl;
+        }
+
+        delete[] tableNames;
     }
 
-    PQclear(res);
     PQfinish(connection);
-// #endif
+    #endif
 
     return 0;
 }
@@ -219,4 +263,33 @@ std::string createBetweenRowsRow(const std::string::size_type *columnWidths, con
         resultStream << repeat(BETWEEN_ROWS_SEPARATOR, columnWidths[i] + 1) << TABLE_COL_SEPARATOR;
 
     return resultStream.str();
+}
+
+
+std::string join(const std::string *elements, const int &size, const std::string &separator) {
+    if (size < 1)
+        return "";
+
+    std::stringstream resultStream{};
+
+    for (int i = 0; i < size - 1; ++i) {
+        if (elements[i].empty())
+            continue;
+        resultStream << elements[i] << separator;
+    }
+    resultStream << elements[size - 1];
+
+    return resultStream.str();
+}
+
+
+std::vector<const char*> generateInsertParamValues(const std::vector<std::string> &insertValues) {
+    std::vector<const char*> paramValues;
+    paramValues.reserve(insertValues.size()); // Reserve space to avoid multiple allocations
+
+    for (const auto &value : insertValues) {
+        paramValues.push_back(value.c_str()); // Store C-string pointers
+    }
+
+    return paramValues;
 }
