@@ -4,7 +4,6 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <limits>
 
 
 #define POSTGRE_SQL_PORT std::string("5432")
@@ -26,7 +25,7 @@ std::string createBetweenRowsRow(const std::string::size_type *, const int &);
 
 std::string join(const std::string *, const int &, const std::string &);
 
-std::vector<const char*> generateInsertParamValues(const std::vector<std::string> &insertValues);
+std::vector<const char*> generateInsertParamValues(const std::vector<std::string> &);
 
 
 int main() {
@@ -63,7 +62,7 @@ int main() {
     }
 
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-// #if 0
+#if 0
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
@@ -128,60 +127,58 @@ int main() {
     }
 
     PQclear(queryResult);
-// #endif
+#endif
 
-    #if 0
+    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
+#if 0
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) { // Not successful SQL query
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+
     } else {
         auto *tableNames = new std::string[PQnfields(queryResult)]{}; // Dynamic arr with the table names
         std::vector<std::string> insertValues; // Vector with the values
         bool skipId = false;
 
-        for (int i = 0; i < PQnfields(queryResult); i++) {
-            // Read the column value and keep it
+        for (int i = 0; i < PQnfields(queryResult); i++) { // Read the column value and keep it
             std::string currentColumnName{PQfname(queryResult, i)};
             if (currentColumnName == "id") {
                 skipId = true;
                 continue;
             }
-            tableNames[i] = currentColumnName;
+            tableNames[i] = currentColumnName; // Add the column name to the arr
 
-            std::cout << "Enter " << currentColumnName << ':';
+            std::cout << "Enter " << currentColumnName << ':'; // Ask the user for input
 
             switch (PQftype(queryResult, i)) {
-                case 1043: {
-                    // VARCHAR
-                    if (std::cin.peek() == '\n') std::cin.ignore();
+                case 1043: { // VARCHAR
+                    if (std::cin.peek() == '\n')
+                        std::cin.ignore();
+
                     std::string currentValue;
                     std::getline(std::cin, currentValue);
 
                     insertValues.push_back(currentValue);
                     break;
                 }
-                case 23: {
-                    // INT4
+                case 23: { // INT4
                     int currentValue;
                     std::cin >> currentValue;
 
                     insertValues.push_back(std::to_string(currentValue));
                     break;
                 }
-                case 1700: {
-                    // DECIMAL, NUMERIC
+                case 1700: { // DECIMAL, NUMERIC
                     double currentValue;
                     std::cin >> currentValue;
 
                     insertValues.push_back(std::to_string(currentValue));
                     break;
                 }
-                case 1082: {
-                    // DATE
+                case 1082: { // DATE
                     // TODO: VALIDATE THE DATE FORMAT yyyy-MM-dd
                     std::string currentValue;
                     std::cin >> currentValue;
@@ -190,7 +187,7 @@ int main() {
                     break;
                 }
                 default: {
-                    // TODO: add other cases or write default behaviour
+                    // TODO: add other type cases or write default behaviour
                 }
             }
         }
@@ -210,13 +207,14 @@ int main() {
 
         std::cout << insertQueryStream.str() << "\n";
 
-        PGresult *res = PQexecParams(connection, insertQueryStream.str().c_str(),
+        PGresult *insertResult = PQexecParams(connection, insertQueryStream.str().c_str(),
                                      PQnfields(queryResult) - (skipId ? 1 : 0), NULL,
                                      generateInsertParamValues(insertValues).data(),
                                      NULL, NULL, 0);
 
-        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            std::cerr << "INSERT failed: " << PQresultErrorMessage(res) << std::endl;
+        if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) { // Problem with the Insertion of data
+            std::cerr << "INSERT failed: " << PQresultErrorMessage(insertResult) << std::endl;
+
         } else {
             std::cout << "Record inserted successfully into " << "pc" << "!" << std::endl;
         }
@@ -285,11 +283,10 @@ std::string join(const std::string *elements, const int &size, const std::string
 
 std::vector<const char*> generateInsertParamValues(const std::vector<std::string> &insertValues) {
     std::vector<const char*> paramValues;
-    paramValues.reserve(insertValues.size()); // Reserve space to avoid multiple allocations
+    paramValues.reserve(insertValues.size());
 
-    for (const auto &value : insertValues) {
-        paramValues.push_back(value.c_str()); // Store C-string pointers
-    }
+    for (const auto &value : insertValues)
+        paramValues.push_back(value.c_str());
 
     return paramValues;
 }
