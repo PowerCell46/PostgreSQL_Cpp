@@ -390,6 +390,29 @@ int main() {
     PQclear(dropTableResult);
 #endif
 
+    // DROP DATABASE ...;
+    /******************************************************************************************************************/
+    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
+#if 0
+    std::string databaseName;
+
+    std::cout << "Enter Database name:";
+    std::cin >> databaseName;
+
+    const std::string dropDatabaseQuery = std::string("DROP DATABASE IF EXISTS ") + databaseName + std::string(";");
+
+    PGresult* dropDatabaseResult = PQexec(connection, dropDatabaseQuery.c_str());
+
+    if (PQresultStatus(dropDatabaseResult) != PGRES_COMMAND_OK) {
+        std::cerr << "DROP DATABASE failed: " << PQerrorMessage(connection) << std::endl;
+
+    } else {
+        std::cout << "Database " << databaseName << " dropped successfully.\n";
+    }
+
+    PQclear(dropDatabaseResult);
+#endif
+
     return 0;
 }
 
