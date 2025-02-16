@@ -21,13 +21,13 @@ int main() {
     if (userEnv == nullptr || passEnv == nullptr) {
         std::cerr
                 << "Error: Environment variables " << POSTGRE_SQL_ADMIN_ENV_NAME << " or "
-                << POSTGRE_SQL_ADMIN_ENV_PASS << " are not set." << std::endl;
+                << POSTGRE_SQL_ADMIN_ENV_PASS << " are not set.\n";
         return 1;
     }
 
     if (outputFileNameEnv == nullptr) {
         std::cerr
-                << "Error: Environment variable " << OUTPUT_FILE_ENV << " is not set." << std::endl;
+                << "Error: Environment variable " << OUTPUT_FILE_ENV << " is not set.\n";
         return 1;
     }
 
@@ -43,9 +43,9 @@ int main() {
 
     if (PQstatus(connection) != CONNECTION_OK) {
         // Problem with the Connection
-        std::cout << "Connection to database failed: " << PQerrorMessage(connection) << std::endl;
-
+        std::cout << "Connection to Database failed: " << PQerrorMessage(connection) << '\n';
         PQfinish(connection);
+
         return 1;
     }
 

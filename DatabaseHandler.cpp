@@ -31,7 +31,8 @@ DatabaseHandler::DatabaseHandler(PGconn *connection): connection(connection) {
 }
 
 int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const std::string &outputFileNameEnv) const {
-    const std::string selectQuery = std::string("SELECT * FROM ") + tableName + std::string(";");
+    const std::string selectQuery =
+        std::string("SELECT * FROM ") + tableName + std::string(";");
 
     PGresult *queryResult = nullptr;
 
@@ -64,9 +65,8 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
 
     // Calculate the total char number of a row
     std::string::size_type totalSymbolsSize = 1;
-    for (int i = 0; i < PQnfields(queryResult); i++) {
+    for (int i = 0; i < PQnfields(queryResult); i++)
         totalSymbolsSize += columnWidths[i] + 2;
-    }
 
     // Print the table Head
     fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n' << TABLE_COL_SEPARATOR;
@@ -98,8 +98,8 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
     std::cout << "SELECT operation was successful.\n";
 
     delete columnWidths;
-    fileStream.close();
 
+    fileStream.close();
     PQclear(queryResult);
 
     return 0;
