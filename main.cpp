@@ -349,7 +349,7 @@ int main() {
     // TRUNCATE TABLE ...;
     /******************************************************************************************************************/
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if
+#if 0
     std::string tableName;
     std::cout << "Enter Table name:";
     std::cin >> tableName;
@@ -366,6 +366,28 @@ int main() {
     }
 
     PQclear(truncateResult);
+#endif
+
+    // DROP TABLE ...;
+    /******************************************************************************************************************/
+    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
+#if 0
+    std::string tableName;
+    std::cout << "Enter Table name:";
+    std::cin >> tableName;
+
+    const std::string dropTableQuery = std::string("DROP TABLE IF EXISTS ") + tableName + std::string(" CASCADE;");
+
+    PGresult* dropTableResult = PQexec(connection, dropTableQuery.c_str());
+
+    if (PQresultStatus(dropTableResult) != PGRES_COMMAND_OK) {
+        std::cerr << "DROP TABLE failed: " << PQerrorMessage(connection) << std::endl;
+
+    } else {
+        std::cout << "Table " << tableName << " dropped successfully.\n";
+    }
+
+    PQclear(dropTableResult);
 #endif
 
     return 0;
