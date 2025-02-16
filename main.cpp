@@ -15,6 +15,7 @@
 #define TABLE_COL_SEPARATOR '|'
 #define END_OF_COL_SEPARATOR " |"
 #define COMMA_SPACE_SEPARATOR std::string(", ")
+#define ESCAPE std::string("esc")
 
 
 std::string repeat(const char &, const std::string::size_type &);
@@ -24,6 +25,8 @@ std::string addRightPadding(const std::string &, const std::string::size_type &)
 std::string createBetweenRowsRow(const std::string::size_type *, const int &);
 
 std::string join(const std::string *, const int &, const std::string &);
+
+std::string join(const std::vector<std::string> &, const std::string &);
 
 std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &);
 
@@ -136,7 +139,7 @@ int main() {
     // INSERT INTO pc;
     /******************************************************************************************************************/
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-    #if 0
+#if 0
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, "SELECT * FROM pc;");
 
@@ -208,7 +211,7 @@ int main() {
         }
 
         std::stringstream insertQueryStream{}; // Start to build the query
-        insertQueryStream << "INSERT INTO pc (" << join(tableNames, PQnfields(queryResult), ", ") << ") VALUES (";
+        insertQueryStream << "INSERT INTO pc (" << join(tableNames, PQnfields(queryResult), COMMA_SPACE_SEPARATOR) << ") VALUES (";
 
         for (int i = 0; i < PQnfields(queryResult); i++) {
             if (skipId && i == 0)
@@ -216,7 +219,7 @@ int main() {
 
             insertQueryStream << '$' << (skipId ? i : i + 1);
             if (i < PQnfields(queryResult) - 1)
-                insertQueryStream << ", ";
+                insertQueryStream << COMMA_SPACE_SEPARATOR;
         }
         insertQueryStream << ");";
 
@@ -245,9 +248,9 @@ int main() {
     }
 
     PQfinish(connection);
-    #endif
+#endif
 
-        // UPDATE pc SET ... WHERE ...;
+    // UPDATE pc SET ... WHERE ...;
     /******************************************************************************************************************/
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
 #if 0
@@ -505,6 +508,47 @@ int main() {
     }
 #endif
 
+    // CREATE TABLE ...;
+    /******************************************************************************************************************/
+    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
+# if 0
+    std::string createTableName;
+
+    std::cout << "Enter Table name:";
+    std::cin >> createTableName;
+
+    std::vector<std::string> columnDefinitions;
+
+
+    std::cin.ignore();
+    while (true) {
+        std::cout << "Enter column definition line or '" << ESCAPE << "':";
+
+        std::string currentColumnDefinition;
+        std::getline(std::cin, currentColumnDefinition);
+        if (currentColumnDefinition == ESCAPE)
+            break;
+
+        columnDefinitions.push_back(currentColumnDefinition);
+    }
+
+    std::string createTableQuery =
+            std::string("CREATE TABLE IF NOT EXISTS ")
+            + createTableName + std::string(" (")
+            + join(columnDefinitions, COMMA_SPACE_SEPARATOR) + std::string(");");
+
+    PGresult* createTableResult =  PQexec(connection, createTableQuery.c_str());
+
+    if (PQresultStatus(createTableResult) != PGRES_COMMAND_OK) {
+        std::cerr << "CREATE TABLE failed: " << PQerrorMessage(connection) << '\n';
+
+    } else {
+        std::cout << "Table '" << createTableName << "' created successfully.\n";
+    }
+
+    PQclear(createTableResult);
+#endif
+
     // TRUNCATE TABLE ...;
     /******************************************************************************************************************/
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
@@ -625,6 +669,18 @@ std::string join(const std::string *elements, const int &size, const std::string
     resultStream << elements[size - 1];
 
     return resultStream.str();
+}
+
+std::string join(const std::vector<std::string> &elements, const std::string &separator) {
+    if (elements.empty())
+        return "";
+
+    std::stringstream resultsStream{};
+    for (int i = 0; i < elements.size() - 1; ++i)
+        resultsStream << elements.at(i) << separator;
+    resultsStream << elements.at(elements.size() - 1);
+
+    return resultsStream.str();
 }
 
 
