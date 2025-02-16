@@ -36,7 +36,9 @@ std::vector<const char *> generateInsertParamValues(const std::vector<std::strin
 bool isSqlDateFormatValid(const std::string &);
 
 
-int SELECT_ALL_SQL_QUERY(PGconn*, const std::string&, const std::string&);
+int SELECT_ALL_SQL_QUERY(PGconn *, const std::string &, const std::string &);
+
+int INSERT_SQL_QUERY(PGconn *, const std::string &);
 
 
 int main() {
@@ -79,121 +81,11 @@ int main() {
     std::cout << "Enter table name for SELECT query:";
     std::cin >> tableName;
 
-    SELECT_ALL_SQL_QUERY(connection, tableName, outputFileNameEnv);
 
-    // INSERT INTO pc;
-    /******************************************************************************************************************/
-    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if 0
-    PGresult *queryResult = nullptr;
-    queryResult = PQexec(connection, "SELECT * FROM pc;");
+    // INSERT_SQL_QUERY(connection, tableName);
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
-        fprintf(stderr, "%s[%d]: Select failed: %s\n",
-                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
-    } else {
-        auto *tableNames = new std::string[PQnfields(queryResult)]{}; // Dynamic arr with the table names
-        std::vector<std::string> insertValues; // Vector with the values
-        bool skipId = false;
+    // SELECT_ALL_SQL_QUERY(connection, tableName, outputFileNameEnv);
 
-        for (int i = 0; i < PQnfields(queryResult); i++) {
-            // Read the column value and keep it
-            std::string currentColumnName{PQfname(queryResult, i)};
-            if (currentColumnName == "id") {
-                skipId = true;
-                continue;
-            }
-            tableNames[i] = currentColumnName; // Add the column name to the arr
-
-            std::cout << "Enter " << currentColumnName << ':'; // Prompt the user for input
-
-            switch (PQftype(queryResult, i)) {
-                // Read different data types
-                case 1043: {
-                    // VARCHAR
-                    if (std::cin.peek() == '\n')
-                        std::cin.ignore();
-
-                    std::string currentValue;
-                    std::getline(std::cin, currentValue);
-
-                    insertValues.push_back(currentValue);
-                    break;
-                }
-                case 23: {
-                    // INT4
-                    int currentValue;
-                    std::cin >> currentValue;
-
-                    insertValues.push_back(std::to_string(currentValue));
-                    break;
-                }
-                case 1700: {
-                    // DECIMAL, NUMERIC
-                    double currentValue;
-                    std::cin >> currentValue;
-
-                    insertValues.push_back(std::to_string(currentValue));
-                    break;
-                }
-                case 1082: {
-                    // DATE
-                    // TODO: VALIDATE THE DATE FORMAT yyyy-MM-dd
-                    std::string currentValue;
-                    std::cin >> currentValue;
-
-                    if (isSqlDateFormatValid(currentValue))
-                        insertValues.push_back(currentValue);
-                    else
-                        std::cout << "Invalid date entered!"; // TODO: No value added ATM to the insert request
-                    break;
-                }
-                default: {
-                    // TODO: add other type cases or write default behaviour
-                }
-            }
-        }
-
-        std::stringstream insertQueryStream{}; // Start to build the query
-        insertQueryStream << "INSERT INTO pc (" << join(tableNames, PQnfields(queryResult), COMMA_SPACE_SEPARATOR) << ") VALUES (";
-
-        for (int i = 0; i < PQnfields(queryResult); i++) {
-            if (skipId && i == 0)
-                continue;
-
-            insertQueryStream << '$' << (skipId ? i : i + 1);
-            if (i < PQnfields(queryResult) - 1)
-                insertQueryStream << COMMA_SPACE_SEPARATOR;
-        }
-        insertQueryStream << ");";
-
-        std::cout << insertQueryStream.str() << "\n";
-
-        PGresult *insertResult = PQexecParams(
-            connection,
-            insertQueryStream.str().c_str(),
-            PQnfields(queryResult) - (skipId ? 1 : 0),
-            NULL,
-            generateInsertParamValues(insertValues).data(),
-            NULL,
-            NULL,
-            0
-        );
-
-        if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) {
-            // Problem with the Insertion of data
-            std::cerr << "INSERT failed: " << PQresultErrorMessage(insertResult) << std::endl;
-
-        } else {
-            std::cout << "Record inserted successfully into " << "pc" << "!" << std::endl;
-        }
-
-        delete[] tableNames;
-    }
-
-    PQfinish(connection);
-#endif
 
     // UPDATE pc SET ... WHERE ...;
     /******************************************************************************************************************/
@@ -565,14 +457,15 @@ int main() {
 }
 
 
-int SELECT_ALL_SQL_QUERY(PGconn *connection, const std::string& tableName, const std::string& outputFileNameEnv) {
-    std::string selectQuery = std::string("SELECT * FROM ") + tableName + std::string(";");
+int SELECT_ALL_SQL_QUERY(PGconn *connection, const std::string &tableName, const std::string &outputFileNameEnv) {
+    const std::string selectQuery = std::string("SELECT * FROM ") + tableName + std::string(";");
 
     PGresult *queryResult = nullptr;
 
     queryResult = PQexec(connection, selectQuery.c_str());
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) { // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
         return 1;
@@ -633,6 +526,124 @@ int SELECT_ALL_SQL_QUERY(PGconn *connection, const std::string& tableName, const
 
     delete columnWidths;
     fileStream.close();
+
+    PQclear(queryResult);
+
+    return 0;
+}
+
+int INSERT_SQL_QUERY(PGconn *connection, const std::string &tableName) {
+    const std::string selectQuery = std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
+
+    PGresult *queryResult = nullptr;
+    queryResult = PQexec(connection, selectQuery.c_str());
+
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
+        fprintf(stderr, "%s[%d]: Select failed: %s\n",
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+        return 1;
+    }
+
+    const int tableColumnsNumber = PQnfields(queryResult);
+    auto *tableNames = new std::string[tableColumnsNumber]{}; // Dynamic arr with the table names
+    std::vector<std::string> insertValues; // Vector with the values
+    bool skipId = false;
+
+    for (int i = 0; i < tableColumnsNumber; i++) {
+        // Read the column value and keep it
+        std::string currentColumnName{PQfname(queryResult, i)};
+        if (currentColumnName == "id") {
+            skipId = true;
+            continue;
+        }
+        tableNames[i] = currentColumnName; // Add the column name to the arr
+
+        std::cout << "Enter " << currentColumnName << ':'; // Prompt the user for input
+
+        // TODO: Add validations to the entered data
+        switch (PQftype(queryResult, i)) {
+            // Read different data types
+            case 1043: {
+                // VARCHAR
+                if (std::cin.peek() == '\n')
+                    std::cin.ignore();
+
+                std::string currentValue;
+                std::getline(std::cin, currentValue);
+
+                insertValues.push_back(currentValue);
+                break;
+            }
+            case 23: {
+                // INT4
+                int currentValue;
+                std::cin >> currentValue;
+
+                insertValues.push_back(std::to_string(currentValue));
+                break;
+            }
+            case 1700: {
+                // DECIMAL, NUMERIC
+                double currentValue;
+                std::cin >> currentValue;
+
+                insertValues.push_back(std::to_string(currentValue));
+                break;
+            }
+            case 1082: {
+                // DATE
+                std::string currentValue;
+                std::cin >> currentValue;
+
+                if (isSqlDateFormatValid(currentValue))
+                    insertValues.push_back(currentValue);
+                else
+                    std::cout << "Invalid date entered!";
+
+                break;
+            }
+            default: {
+                // TODO: add other type cases or write default behaviour
+            }
+        }
+    }
+
+    std::stringstream insertQueryStream{}; // Start to build the query
+    insertQueryStream << "INSERT INTO " << tableName
+            << " (" << join(tableNames, tableColumnsNumber, COMMA_SPACE_SEPARATOR) << ") VALUES (";
+
+    for (int i = 0; i < tableColumnsNumber; i++) { // Add placeholders for the dynamic data to the query
+        if (skipId && i == 0)
+            continue;
+
+        insertQueryStream << '$' << (skipId ? i : i + 1);
+        if (i < tableColumnsNumber - 1)
+            insertQueryStream << COMMA_SPACE_SEPARATOR;
+    }
+    insertQueryStream << ");";
+
+    std::cout << insertQueryStream.str() << "\n";
+
+    PGresult *insertResult = PQexecParams(
+        connection,
+        insertQueryStream.str().c_str(),
+        tableColumnsNumber - (skipId ? 1 : 0),
+        NULL,
+        generateInsertParamValues(insertValues).data(),
+        NULL,
+        NULL,
+        0
+    );
+
+    if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) { // Problem with the Insertion of data
+        std::cerr << "INSERT failed: " << PQresultErrorMessage(insertResult) << std::endl;
+
+    } else {
+        std::cout << "INSERT operation was successful.\n";
+    }
+
+    delete[] tableNames;
 
     PQclear(queryResult);
 
