@@ -42,6 +42,8 @@ int INSERT_SQL_QUERY(PGconn *, const std::string &);
 
 int UPDATE_SQL_QUERY(PGconn *, const std::string &);
 
+int DELETE_SQL_QUERY(PGconn *, const std::string &);
+
 
 int main() {
     const char *userEnv = std::getenv(POSTGRE_SQL_ADMIN_ENV_NAME);
@@ -80,115 +82,16 @@ int main() {
     }
 
     std::string tableName;
-    std::cout << "Enter table name for SELECT query:";
+    std::cout << "Enter table name query:";
     std::cin >> tableName;
-
 
     // INSERT_SQL_QUERY(connection, tableName);
 
-    UPDATE_SQL_QUERY(connection, tableName);
+    // UPDATE_SQL_QUERY(connection, tableName);
+
+    // DELETE_SQL_QUERY(connection, tableName);
 
     SELECT_ALL_SQL_QUERY(connection, tableName, outputFileNameEnv);
-
-
-    // DELETE FROM pc;
-    /******************************************************************************************************************/
-    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if 0
-    PGresult *queryResult = nullptr;
-    queryResult = PQexec(connection, "SELECT * FROM pc;");
-
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
-        fprintf(stderr, "%s[%d]: Select failed: %s\n",
-                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
-
-    } else {
-        const char* paramValues[1];
-        std::string deleteByColumn, deleteValue{};
-
-        std::cout << "Enter EXACT name of the column by you wish to delete:"; // Prompt the user to enter delete column
-        std::cin >> deleteByColumn; // Read the delete by column
-
-        for (int i = 0; i < PQnfields(queryResult); i++) {
-            const std::string currentColumnName{PQfname(queryResult, i)};
-
-            if (currentColumnName == deleteByColumn) { // Read different type of data type
-                std::cout << "Enter " << currentColumnName << " value:";
-
-                switch (PQftype(queryResult, i)) {
-                    case 1043: { // VARCHAR
-                        std::string currentValue;
-
-                        if (std::cin.peek() == '\n')
-                            std::cin.ignore();
-                        std::getline(std::cin, currentValue);
-
-                        deleteValue = currentValue;
-                        break;
-                    }
-                    case 23: { // INT4
-                        int currentValue;
-                        std::cin >> currentValue;
-
-                        deleteValue = std::to_string(currentValue);
-                        break;
-                    }
-                    case 1700: { // DECIMAL, NUMERIC
-                        double currentValue;
-                        std::cin >> currentValue;
-
-                        deleteValue = std::to_string(currentValue);
-                        break;
-                    }
-                    case 1082: { // DATE
-                        std::string currentValue;
-                        std::cin >> currentValue;
-
-                        if (isSqlDateFormatValid(currentValue))
-                            deleteValue = currentValue;
-                        else
-                            // TODO: nothing happens ATM
-                        break;
-                    }
-                    default: {
-                        // TODO: add other type cases or write default behaviour
-                    }
-                }
-                break;
-            }
-        }
-
-        if (deleteValue.empty()) {
-            std::cout << "No column found with name " << deleteByColumn << "!";
-            return 0;
-        }
-
-        paramValues[0] = deleteValue.c_str();
-        const std::string deleteQuery = std::string("DELETE FROM pc WHERE ") + deleteByColumn + std::string(" = $1;");
-
-        PGresult *deleteResult = PQexecParams(
-            connection,
-            deleteQuery.c_str(),
-            1, // Number of parameters
-            NULL, // Parameter types (NULL = infer from query)
-            paramValues, // Parameter values
-            NULL, // Parameter lengths (NULL = assume text)
-            NULL, // Parameter formats (NULL = assume text)
-            0 // Result format: 0 for text, 1 for binary
-        );
-
-        if (PQresultStatus(deleteResult) != PGRES_COMMAND_OK) {
-            std::cerr << "DELETE failed: " << PQerrorMessage(connection) << std::endl;
-
-        } else {
-            std::cout << "Record deleted successfully.\n";
-        }
-
-        PQclear(deleteResult);
-
-    }
-#endif
 
     // CREATE TABLE ...;
     /******************************************************************************************************************/
@@ -487,7 +390,6 @@ int INSERT_SQL_QUERY(PGconn *connection, const std::string &tableName) {
     if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) {
         // Problem with the Insertion of data
         std::cerr << "INSERT failed: " << PQresultErrorMessage(insertResult) << std::endl;
-
     } else {
         std::cout << "INSERT operation was successful.\n";
     }
@@ -664,12 +566,119 @@ int UPDATE_SQL_QUERY(PGconn *connection, const std::string &tableName) {
 
     if (PQresultStatus(updateResult) != PGRES_COMMAND_OK) {
         std::cerr << "UPDATE failed: " << PQerrorMessage(connection) << std::endl;
-
     } else {
         std::cout << "UPDATE operation was successful.\n";
     }
 
     PQclear(updateResult);
+    return 0;
+}
+
+int DELETE_SQL_QUERY(PGconn *connection, const std::string &tableName) {
+    const std::string selectQuery = std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
+
+    PGresult *queryResult = nullptr;
+    queryResult = PQexec(connection, selectQuery.c_str());
+
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
+        fprintf(stderr, "%s[%d]: Select failed: %s\n",
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+        return 1;
+    }
+
+    const char *paramValues[1];
+    std::string deleteByColumn, deleteValue{};
+
+    std::cout << "Enter the name of the column by you wish to delete:"; // Prompt the user to enter Delete column
+    std::cin >> deleteByColumn; // Read the Delete by column
+
+    for (int i = 0; i < PQnfields(queryResult); i++) {
+        const std::string currentColumnName{PQfname(queryResult, i)};
+
+        if (currentColumnName == deleteByColumn) {
+            // Read different type of data type
+            std::cout << "Enter " << currentColumnName << " value:";
+
+            // TODO: Add validations to the entered data
+            switch (PQftype(queryResult, i)) {
+                case 1043: {
+                    // VARCHAR
+                    std::string currentValue;
+
+                    if (std::cin.peek() == '\n')
+                        std::cin.ignore();
+                    std::getline(std::cin, currentValue);
+
+                    deleteValue = currentValue;
+                    break;
+                }
+                case 23: {
+                    // INT4
+                    int currentValue;
+                    std::cin >> currentValue;
+
+                    deleteValue = std::to_string(currentValue);
+                    break;
+                }
+                case 1700: {
+                    // DECIMAL, NUMERIC
+                    double currentValue;
+                    std::cin >> currentValue;
+
+                    deleteValue = std::to_string(currentValue);
+                    break;
+                }
+                case 1082: {
+                    // DATE
+                    std::string currentValue;
+                    std::cin >> currentValue;
+
+                    if (isSqlDateFormatValid(currentValue))
+                        deleteValue = currentValue;
+                    else
+                        std::cout << "Invalid date entered!";
+
+                    break;
+                }
+                default: {
+                    // TODO: add other type cases or write default behaviour
+                }
+            }
+            break;
+        }
+    }
+
+    if (deleteValue.empty()) {
+        std::cout << "No column found with name " << deleteByColumn << "!";
+        return 0;
+    }
+
+    paramValues[0] = deleteValue.c_str();
+    const std::string deleteQuery =
+            std::string("DELETE FROM ") + tableName +
+            std::string(" WHERE ") + deleteByColumn +
+            std::string(" = $1;");
+
+    PGresult *deleteResult = PQexecParams(
+        connection,
+        deleteQuery.c_str(),
+        1, // Number of parameters
+        nullptr, // Parameter types (NULL = infer from query)
+        paramValues, // Parameter values
+        nullptr, // Parameter lengths (NULL = assume text)
+        nullptr, // Parameter formats (NULL = assume text)
+        0 // Result format: 0 for text, 1 for binary
+    );
+
+    if (PQresultStatus(deleteResult) != PGRES_COMMAND_OK) {
+        std::cerr << "DELETE failed: " << PQerrorMessage(connection) << std::endl;
+
+    } else {
+        std::cout << "DELETE operation was successful.\n";
+    }
+
+    PQclear(deleteResult);
     return 0;
 }
 
