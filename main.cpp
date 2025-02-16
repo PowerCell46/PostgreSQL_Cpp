@@ -51,9 +51,9 @@ int main() {
             std::string("&user=") + std::string(userEnv) +
             std::string("&password=") + std::string(passEnv);
 
-    PGconn *connection = PQconnectdb(connectionString.c_str());
-
+    // Connection
     /******************************************************************************************************************/
+    PGconn *connection = PQconnectdb(connectionString.c_str());
 
     if (PQstatus(connection) != CONNECTION_OK) {
         // Problem with the Connection
@@ -63,8 +63,8 @@ int main() {
         return 1;
     }
 
-    /******************************************************************************************************************/
     // SELECT * FROM pc;
+    /******************************************************************************************************************/
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
 #if 0
     PGresult *queryResult = nullptr;
@@ -133,8 +133,8 @@ int main() {
     PQclear(queryResult);
 #endif
 
-    /******************************************************************************************************************/
     // INSERT INTO pc;
+    /******************************************************************************************************************/
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
     #if 0
     PGresult *queryResult = nullptr;
@@ -247,8 +247,8 @@ int main() {
     PQfinish(connection);
     #endif
 
-    /******************************************************************************************************************/
     // DELETE FROM pc;
+    /******************************************************************************************************************/
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
 #if 0
     PGresult *queryResult = nullptr;
@@ -344,6 +344,28 @@ int main() {
         PQclear(deleteResult);
 
     }
+#endif
+
+    // TRUNCATE TABLE ...;
+    /******************************************************************************************************************/
+    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
+#if
+    std::string tableName;
+    std::cout << "Enter Table name:";
+    std::cin >> tableName;
+
+    std::string truncateQuery = std::string("TRUNCATE TABLE ") + tableName + std::string(" RESTART IDENTITY CASCADE;");
+
+    PGresult* truncateResult = PQexec(connection, truncateQuery.c_str());
+
+    if (PQresultStatus(truncateResult) != PGRES_COMMAND_OK) {
+        std::cerr << "TRUNCATE failed: " << PQerrorMessage(connection) << std::endl;
+
+    } else {
+        std::cout << "Table " << tableName << " truncated successfully\n";
+    }
+
+    PQclear(truncateResult);
 #endif
 
     return 0;
