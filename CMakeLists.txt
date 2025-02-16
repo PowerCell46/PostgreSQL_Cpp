@@ -37,7 +37,9 @@ message("-- PostgreSQL_LIBRARY_DIR: ${PostgreSQL_LIBRARY_DIR}")
 message("-- PostgreSQL_LIBRARIES: ${PostgreSQL_LIBRARIES}")
 
 # Create an executable
-add_executable(ExamplePostgreSQL main.cpp)
+add_executable(ExamplePostgreSQL main.cpp
+        DatabaseHandler.cpp
+        DatabaseHandler.h)
 
 # Link the executable `ExamplePostgreSQL` with the PostgreSQL library
 target_link_libraries(ExamplePostgreSQL ${PostgreSQL_LIBRARIES})
