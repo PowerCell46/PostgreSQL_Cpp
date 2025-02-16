@@ -247,6 +247,165 @@ int main() {
     PQfinish(connection);
     #endif
 
+        // UPDATE pc SET ... WHERE ...;
+    /******************************************************************************************************************/
+    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
+#if 0
+    PGresult *queryResult = nullptr;
+    queryResult = PQexec(connection, "SELECT * FROM pc;");
+
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
+        fprintf(stderr, "%s[%d]: Select failed: %s\n",
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+
+    } else {
+        const char* paramValues[2];
+        std::string updateColumn, updateValue{};
+
+        std::cout << "Enter the EXACT name of the column you wish to update:"; // Prompt the user to enter delete column
+        std::cin >> updateColumn; // Read the delete by column
+
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            const std::string currentColumnName{PQfname(queryResult, i)};
+
+            if (currentColumnName == updateColumn) { // Read different type of data type
+                std::cout << "Enter " << currentColumnName << " value:";
+
+                switch (PQftype(queryResult, i)) {
+                    case 1043: { // VARCHAR
+                        std::string currentValue;
+
+                        if (std::cin.peek() == '\n')
+                            std::cin.ignore();
+                        std::getline(std::cin, currentValue);
+
+                        updateValue = currentValue;
+                        break;
+                    }
+                    case 23: { // INT4
+                        int currentValue;
+                        std::cin >> currentValue;
+
+                        updateValue = std::to_string(currentValue);
+                        break;
+                    }
+                    case 1700: { // DECIMAL, NUMERIC
+                        double currentValue;
+                        std::cin >> currentValue;
+
+                        updateValue = std::to_string(currentValue);
+                        break;
+                    }
+                    case 1082: { // DATE
+                        std::string currentValue;
+                        std::cin >> currentValue;
+
+                        if (isSqlDateFormatValid(currentValue))
+                            updateValue = currentValue;
+                        else
+                            // TODO: nothing happens ATM
+                        break;
+                    }
+                    default: {
+                        // TODO: add other type cases or write default behaviour
+                    }
+                }
+                break;
+            }
+        }
+
+        if (updateValue.empty()) {
+            std::cout << "No column found with name " << updateColumn << "!";
+            return 0;
+        }
+
+        std::string updateWhereColumn, updateWhereValue{};
+
+        std::cout << "Enter the EXACT name of the column for the WHERE clause:"; // Prompt the user to enter delete column
+        std::cin >> updateWhereColumn;
+
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            const std::string currentColumnName{PQfname(queryResult, i)};
+
+            if (currentColumnName == updateWhereColumn) { // Read different type of data type
+                std::cout << "Enter " << currentColumnName << " value:";
+
+                switch (PQftype(queryResult, i)) {
+                    case 1043: { // VARCHAR
+                        std::string currentValue;
+
+                        if (std::cin.peek() == '\n')
+                            std::cin.ignore();
+                        std::getline(std::cin, currentValue);
+
+                        updateWhereValue = currentValue;
+                        break;
+                    }
+                    case 23: { // INT4
+                        int currentValue;
+                        std::cin >> currentValue;
+
+                        updateWhereValue = std::to_string(currentValue);
+                        break;
+                    }
+                    case 1700: { // DECIMAL, NUMERIC
+                        double currentValue;
+                        std::cin >> currentValue;
+
+                        updateWhereValue = std::to_string(currentValue);
+                        break;
+                    }
+                    case 1082: { // DATE
+                        std::string currentValue;
+                        std::cin >> currentValue;
+
+                        if (isSqlDateFormatValid(currentValue))
+                            updateWhereValue = currentValue;
+                        else
+                            // TODO: nothing happens ATM
+                                break;
+                    }
+                    default: {
+                        // TODO: add other type cases or write default behaviour
+                    }
+                }
+                break;
+            }
+        }
+
+        if (updateWhereValue.empty()) {
+            std::cout << "No column found with name " << updateColumn << "!";
+            return 0;
+        }
+
+        paramValues[0] = updateValue.c_str();
+        paramValues[1] = updateWhereValue.c_str();
+        const std::string updateQuery = std::string("UPDATE pc SET ") + updateColumn + std::string(" = $1 WHERE ") + updateWhereColumn + std::string(" = $2;");
+
+        PGresult *updateResult = PQexecParams(
+            connection,
+            updateQuery.c_str(),
+            2, // Number of parameters
+            NULL, // Parameter types (NULL = infer from query)
+            paramValues, // Parameter values
+            NULL, // Parameter lengths (NULL = assume text)
+            NULL, // Parameter formats (NULL = assume text)
+            0 // Result format: 0 for text, 1 for binary
+        );
+
+        if (PQresultStatus(updateResult) != PGRES_COMMAND_OK) {
+            std::cerr << "UPDATE failed: " << PQerrorMessage(connection) << std::endl;
+
+        } else {
+            std::cout << "Record updated successfully.\n";
+        }
+
+        PQclear(updateResult);
+
+    }
+#endif
+
     // DELETE FROM pc;
     /******************************************************************************************************************/
     // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
