@@ -44,6 +44,14 @@ int UPDATE_SQL_QUERY(PGconn *, const std::string &);
 
 int DELETE_SQL_QUERY(PGconn *, const std::string &);
 
+int TRUNCATE_SQL_QUERY(PGconn *, const std::string &);
+
+int DROP_TABLE_SQL_QUERY(PGconn *, const std::string &);
+
+int DROP_DATABASE_SQL_QUERY(PGconn *, const std::string &);
+
+int CREATE_TABLE_SQL_QUERY(PGconn *, const std::string &);
+
 
 int main() {
     const char *userEnv = std::getenv(POSTGRE_SQL_ADMIN_ENV_NAME);
@@ -81,8 +89,9 @@ int main() {
         return 1;
     }
 
+    /******************************************************************************************************************/
     std::string tableName;
-    std::cout << "Enter table name query:";
+    std::cout << "Enter Table name:";
     std::cin >> tableName;
 
     // INSERT_SQL_QUERY(connection, tableName);
@@ -91,115 +100,19 @@ int main() {
 
     // DELETE_SQL_QUERY(connection, tableName);
 
+    // CREATE_TABLE_SQL_QUERY(connection, tableName);
+
+    // TRUNCATE_SQL_QUERY(connection, tableName);
+
+    // DROP_TABLE_SQL_QUERY(connection, tableName);
+
+    // std::string databaseName;
+    // std::cout << "Enter database name:";
+    // std::cin >> databaseName;
+
+    // DROP_DATABASE_SQL_QUERY(connection, databaseName);
+
     SELECT_ALL_SQL_QUERY(connection, tableName, outputFileNameEnv);
-
-    // CREATE TABLE ...;
-    /******************************************************************************************************************/
-    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-# if 0
-    std::string createTableName;
-
-    std::cout << "Enter Table name:";
-    std::cin >> createTableName;
-
-    std::vector<std::string> columnDefinitions;
-
-
-    std::cin.ignore();
-    while (true) {
-        std::cout << "Enter column definition line or '" << ESCAPE << "':";
-
-        std::string currentColumnDefinition;
-        std::getline(std::cin, currentColumnDefinition);
-        if (currentColumnDefinition == ESCAPE)
-            break;
-
-        columnDefinitions.push_back(currentColumnDefinition);
-    }
-
-    std::string createTableQuery =
-            std::string("CREATE TABLE IF NOT EXISTS ")
-            + createTableName + std::string(" (")
-            + join(columnDefinitions, COMMA_SPACE_SEPARATOR) + std::string(");");
-
-    PGresult* createTableResult =  PQexec(connection, createTableQuery.c_str());
-
-    if (PQresultStatus(createTableResult) != PGRES_COMMAND_OK) {
-        std::cerr << "CREATE TABLE failed: " << PQerrorMessage(connection) << '\n';
-
-    } else {
-        std::cout << "Table '" << createTableName << "' created successfully.\n";
-    }
-
-    PQclear(createTableResult);
-#endif
-
-    // TRUNCATE TABLE ...;
-    /******************************************************************************************************************/
-    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if 0
-    std::string tableName;
-    std::cout << "Enter Table name:";
-    std::cin >> tableName;
-
-    std::string truncateQuery = std::string("TRUNCATE TABLE ") + tableName + std::string(" RESTART IDENTITY CASCADE;");
-
-    PGresult* truncateResult = PQexec(connection, truncateQuery.c_str());
-
-    if (PQresultStatus(truncateResult) != PGRES_COMMAND_OK) {
-        std::cerr << "TRUNCATE failed: " << PQerrorMessage(connection) << std::endl;
-
-    } else {
-        std::cout << "Table " << tableName << " truncated successfully\n";
-    }
-
-    PQclear(truncateResult);
-#endif
-
-    // DROP TABLE ...;
-    /******************************************************************************************************************/
-    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if 0
-    std::string tableName;
-    std::cout << "Enter Table name:";
-    std::cin >> tableName;
-
-    const std::string dropTableQuery = std::string("DROP TABLE IF EXISTS ") + tableName + std::string(" CASCADE;");
-
-    PGresult* dropTableResult = PQexec(connection, dropTableQuery.c_str());
-
-    if (PQresultStatus(dropTableResult) != PGRES_COMMAND_OK) {
-        std::cerr << "DROP TABLE failed: " << PQerrorMessage(connection) << std::endl;
-
-    } else {
-        std::cout << "Table " << tableName << " dropped successfully.\n";
-    }
-
-    PQclear(dropTableResult);
-#endif
-
-    // DROP DATABASE ...;
-    /******************************************************************************************************************/
-    // TODO: move to a method, add to a class with SQL methods (header file with .cpp impls)
-#if 0
-    std::string databaseName;
-
-    std::cout << "Enter Database name:";
-    std::cin >> databaseName;
-
-    const std::string dropDatabaseQuery = std::string("DROP DATABASE IF EXISTS ") + databaseName + std::string(";");
-
-    PGresult* dropDatabaseResult = PQexec(connection, dropDatabaseQuery.c_str());
-
-    if (PQresultStatus(dropDatabaseResult) != PGRES_COMMAND_OK) {
-        std::cerr << "DROP DATABASE failed: " << PQerrorMessage(connection) << std::endl;
-
-    } else {
-        std::cout << "Database " << databaseName << " dropped successfully.\n";
-    }
-
-    PQclear(dropDatabaseResult);
-#endif
 
     PQfinish(connection);
 
@@ -673,12 +586,98 @@ int DELETE_SQL_QUERY(PGconn *connection, const std::string &tableName) {
 
     if (PQresultStatus(deleteResult) != PGRES_COMMAND_OK) {
         std::cerr << "DELETE failed: " << PQerrorMessage(connection) << std::endl;
-
     } else {
         std::cout << "DELETE operation was successful.\n";
     }
 
     PQclear(deleteResult);
+    return 0;
+}
+
+int TRUNCATE_SQL_QUERY(PGconn *connection, const std::string &tableName) {
+    const std::string truncateQuery =
+            std::string("TRUNCATE TABLE ") + tableName +
+            std::string(" RESTART IDENTITY CASCADE;");
+
+    PGresult *truncateResult = PQexec(connection, truncateQuery.c_str());
+
+    if (PQresultStatus(truncateResult) != PGRES_COMMAND_OK) {
+        std::cerr << "TRUNCATE failed: " << PQerrorMessage(connection) << std::endl;
+        return 1;
+    }
+
+    std::cout << "TRUNCATE operation was successful.\n";
+
+    PQclear(truncateResult);
+    return 0;
+}
+
+int DROP_TABLE_SQL_QUERY(PGconn *connection, const std::string &tableName) {
+    const std::string dropTableQuery =
+            std::string("DROP TABLE IF EXISTS ") + tableName +
+            std::string(" CASCADE;");
+
+    PGresult *dropTableResult = PQexec(connection, dropTableQuery.c_str());
+
+    if (PQresultStatus(dropTableResult) != PGRES_COMMAND_OK) {
+        std::cerr << "DROP TABLE failed: " << PQerrorMessage(connection) << std::endl;
+        return 1;
+    }
+    std::cout << "DROP TABLE operation was successful.\n";
+
+    PQclear(dropTableResult);
+    return 0;
+}
+
+int DROP_DATABASE_SQL_QUERY(PGconn *connection, const std::string &databaseName) {
+    const std::string dropDatabaseQuery =
+            std::string("DROP DATABASE IF EXISTS ") + databaseName +
+            std::string(";");
+
+    PGresult *dropDatabaseResult = PQexec(connection, dropDatabaseQuery.c_str());
+
+    if (PQresultStatus(dropDatabaseResult) != PGRES_COMMAND_OK) {
+        std::cerr << "DROP DATABASE failed: " << PQerrorMessage(connection) << std::endl;
+        return 1;
+    }
+
+    std::cout << "DROP DATABASE operation was successful.\n";
+
+    PQclear(dropDatabaseResult);
+    return 0;
+}
+
+int CREATE_TABLE_SQL_QUERY(PGconn *connection, const std::string &tableName) {
+    std::vector<std::string> columnDefinitions;
+
+    std::cin.ignore();
+    while (true) {
+        std::cout << "Enter column definition line or '" << ESCAPE << "':";
+
+        std::string currentColumnDefinition;
+        std::getline(std::cin, currentColumnDefinition);
+        if (currentColumnDefinition == ESCAPE)
+            break;
+
+        columnDefinitions.push_back(currentColumnDefinition);
+    }
+
+    std::string createTableQuery =
+            std::string("CREATE TABLE IF NOT EXISTS ")
+            + tableName + std::string(" (")
+            + join(columnDefinitions, COMMA_SPACE_SEPARATOR) + std::string(");");
+
+    PGresult* createTableResult =  PQexec(connection, createTableQuery.c_str());
+
+    if (PQresultStatus(createTableResult) != PGRES_COMMAND_OK) {
+        std::cerr << "CREATE TABLE failed: " << PQerrorMessage(connection) << '\n';
+        return 1;
+
+    }
+
+    std::cout << "CREATE TABLE operation was successful.\n";
+
+    PQclear(createTableResult);
     return 0;
 }
 
