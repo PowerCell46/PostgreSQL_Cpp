@@ -5,6 +5,7 @@
 
 class DatabaseHandler {
     PGconn *connection;
+
     static std::string readColumnValue(const Oid&);
     // std::string readTableName(); // implement
 public:

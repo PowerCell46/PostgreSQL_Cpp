@@ -182,7 +182,8 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
 }
 
 int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
-    const std::string selectQuery = std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
+    const std::string selectQuery =
+            std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
 
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, selectQuery.c_str());
@@ -206,52 +207,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == updateColumn) {
             // Read different type of data type
             std::cout << "Enter " << currentColumnName << " value:";
-
-            // TODO: Add validations to the entered data
-            switch (PQftype(queryResult, i)) {
-                case 1043: {
-                    // VARCHAR
-                    std::string currentValue;
-
-                    if (std::cin.peek() == '\n')
-                        std::cin.ignore();
-                    std::getline(std::cin, currentValue);
-
-                    updateValue = currentValue;
-                    break;
-                }
-                case 23: {
-                    // INT4
-                    int currentValue;
-                    std::cin >> currentValue;
-
-                    updateValue = std::to_string(currentValue);
-                    break;
-                }
-                case 1700: {
-                    // DECIMAL, NUMERIC
-                    double currentValue;
-                    std::cin >> currentValue;
-
-                    updateValue = std::to_string(currentValue);
-                    break;
-                }
-                case 1082: {
-                    // DATE
-                    std::string currentValue;
-                    std::cin >> currentValue;
-
-                    if (isSqlDateFormatValid(currentValue))
-                        updateValue = currentValue;
-                    else
-                        std::cout << "Invalid date entered!";
-
-                    break;
-                }
-                default: {
-                    // TODO: add other type cases or write default behaviour
-                }
-            }
+            updateValue = readColumnValue(PQftype(queryResult, i));
             break;
         }
     }
@@ -272,52 +228,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == updateWhereColumn) {
             // Read different type of data type
             std::cout << "Enter " << currentColumnName << " value:";
-
-            // TODO: Add validations to the entered data
-            switch (PQftype(queryResult, i)) {
-                case 1043: {
-                    // VARCHAR
-                    std::string currentValue;
-
-                    if (std::cin.peek() == '\n')
-                        std::cin.ignore();
-                    std::getline(std::cin, currentValue);
-
-                    updateWhereValue = currentValue;
-                    break;
-                }
-                case 23: {
-                    // INT4
-                    int currentValue;
-                    std::cin >> currentValue;
-
-                    updateWhereValue = std::to_string(currentValue);
-                    break;
-                }
-                case 1700: {
-                    // DECIMAL, NUMERIC
-                    double currentValue;
-                    std::cin >> currentValue;
-
-                    updateWhereValue = std::to_string(currentValue);
-                    break;
-                }
-                case 1082: {
-                    // DATE
-                    std::string currentValue;
-                    std::cin >> currentValue;
-
-                    if (isSqlDateFormatValid(currentValue))
-                        updateWhereValue = currentValue;
-                    else
-                        std::cout << "Invalid date entered!";
-
-                    break;
-                }
-                default: {
-                    // TODO: add other type cases or write default behaviour
-                }
-            }
+            updateWhereValue = readColumnValue(PQftype(queryResult, i));
             break;
         }
     }
@@ -355,7 +266,8 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 }
 
 int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
-    const std::string selectQuery = std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
+    const std::string selectQuery =
+            std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
 
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, selectQuery.c_str());
@@ -379,52 +291,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == deleteByColumn) {
             // Read different type of data type
             std::cout << "Enter " << currentColumnName << " value:";
-
-            // TODO: Add validations to the entered data
-            switch (PQftype(queryResult, i)) {
-                case 1043: {
-                    // VARCHAR
-                    std::string currentValue;
-
-                    if (std::cin.peek() == '\n')
-                        std::cin.ignore();
-                    std::getline(std::cin, currentValue);
-
-                    deleteValue = currentValue;
-                    break;
-                }
-                case 23: {
-                    // INT4
-                    int currentValue;
-                    std::cin >> currentValue;
-
-                    deleteValue = std::to_string(currentValue);
-                    break;
-                }
-                case 1700: {
-                    // DECIMAL, NUMERIC
-                    double currentValue;
-                    std::cin >> currentValue;
-
-                    deleteValue = std::to_string(currentValue);
-                    break;
-                }
-                case 1082: {
-                    // DATE
-                    std::string currentValue;
-                    std::cin >> currentValue;
-
-                    if (isSqlDateFormatValid(currentValue))
-                        deleteValue = currentValue;
-                    else
-                        std::cout << "Invalid date entered!";
-
-                    break;
-                }
-                default: {
-                    // TODO: add other type cases or write default behaviour
-                }
-            }
+            deleteValue = readColumnValue(PQftype(queryResult, i));
             break;
         }
     }
