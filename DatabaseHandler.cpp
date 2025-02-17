@@ -50,7 +50,7 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
 
     auto *columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
 
-    // Calculate the width of every column (Table Col names)
+    // Calculate the width of every column (Table Col Names)
     for (int i = 0; i < PQnfields(queryResult); i++) {
         std::string currentColumnName{PQfname(queryResult, i)};
         columnWidths[i] = currentColumnName.length();
@@ -71,7 +71,6 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
 
     // Print the table Head
     fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n' << TABLE_COL_SEPARATOR;
-
 
     // Print the table Column names
     for (int i = 0; i < PQnfields(queryResult); i++) {
@@ -129,19 +128,19 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         // Read the column value and keep it
         std::string currentColumnName{PQfname(queryResult, i)};
         if (currentColumnName == "id") {
+            // Skip id (Most times it's Serial)
             skipId = true;
             continue;
         }
+
         tableNames[i] = currentColumnName; // Add the column name to the arr
-
-        std::cout << "Enter " << currentColumnName << ':'; // Prompt the user for input
-
-        insertValues.push_back(readColumnValue(PQftype(queryResult, i)));
+        insertValues.push_back(readColumnValue(PQftype(queryResult, i), currentColumnName));
     }
 
     std::stringstream insertQueryStream{}; // Start to build the query
     insertQueryStream << "INSERT INTO " << tableName
-            << " (" << join(tableNames, tableColumnsNumber, COMMA_SPACE_SEPARATOR) << ") VALUES (";
+            << " (" << join(tableNames, tableColumnsNumber, COMMA_SPACE_SEPARATOR)
+            << ") VALUES (";
 
     for (int i = 0; i < tableColumnsNumber; i++) {
         // Add placeholders for the dynamic data to the query
@@ -153,8 +152,6 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
             insertQueryStream << COMMA_SPACE_SEPARATOR;
     }
     insertQueryStream << ");";
-
-    std::cout << insertQueryStream.str() << "\n";
 
     PGresult *insertResult = PQexecParams(
         connection,
@@ -175,7 +172,6 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
     }
 
     delete[] tableNames;
-
     PQclear(queryResult);
 
     return 0;
@@ -206,13 +202,12 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 
         if (currentColumnName == updateColumn) {
             // Read different type of data type
-            std::cout << "Enter " << currentColumnName << " value:";
-            updateValue = readColumnValue(PQftype(queryResult, i));
+            updateValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
             break;
         }
     }
 
-    if (updateValue.empty()) {
+    if (updateValue.empty()) { // TODO: Conflict if a diff data type returned ""
         std::cout << "No column found with name " << updateColumn << ".\n";
         return 1;
     }
@@ -227,13 +222,12 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 
         if (currentColumnName == updateWhereColumn) {
             // Read different type of data type
-            std::cout << "Enter " << currentColumnName << " value:";
-            updateWhereValue = readColumnValue(PQftype(queryResult, i));
+            updateWhereValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
             break;
         }
     }
 
-    if (updateWhereValue.empty()) {
+    if (updateWhereValue.empty()) { // TODO: Conflict if a diff data type returned ""
         std::cout << "No column found with name " << updateColumn << ".\n";
         return 1;
     }
@@ -291,7 +285,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == deleteByColumn) {
             // Read different type of data type
             std::cout << "Enter " << currentColumnName << " value:";
-            deleteValue = readColumnValue(PQftype(queryResult, i));
+            deleteValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
             break;
         }
     }
@@ -414,13 +408,15 @@ int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const 
     return 0;
 }
 
-std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue) {
+std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue, const std::string& columnName) {
     switch (dataTypeValue) {
         // Read different data types
         case 1043: {
             // VARCHAR
             std::string currentValue;
             while (true) {
+                std::cout << "Enter " << columnName << ":";
+
                 while (std::cin.peek() == '\n')
                     std::cin.ignore();
 
@@ -436,6 +432,8 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue) {
             // INT4
             int currentValue;
             while (true) {
+                std::cout << "Enter " << columnName << ":";
+
                 std::cin >> currentValue;
 
                 if (std::cin.fail()) {
@@ -454,6 +452,8 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue) {
             // DECIMAL, NUMERIC
             double currentValue;
             while (true) {
+                std::cout << "Enter " << columnName << ":";
+
                 std::cin >> currentValue;
 
                 if (std::cin.fail()) {
@@ -472,16 +472,19 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue) {
             // DATE
             std::string currentValue;
             while (true) {
+                std::cout << "Enter " << columnName << ":";
+
                 std::cin >> currentValue;
 
-                if (isSqlDateFormatValid(currentValue)) break; // Fix: Removed unnecessary fail() check
+                if (isSqlDateFormatValid(currentValue))
+                    break;
                 std::cout << "Invalid DATE format. Use yyyy-MM-dd.\n";
             }
 
             return currentValue;
         }
         default: {
-            std::cout << "Value type not supported at the moment.\n";
+            std::cout << "Value Type not supported at the moment.\n";
             return "";
         }
     }
