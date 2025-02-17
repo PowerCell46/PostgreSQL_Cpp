@@ -3,6 +3,7 @@
 #include "fstream"
 #include "sstream"
 #include "vector"
+#include "limits"
 
 #define BETWEEN_ROWS_SEPARATOR '.'
 #define TABLE_ROW_SEPARATOR '-'
@@ -32,7 +33,7 @@ DatabaseHandler::DatabaseHandler(PGconn *connection): connection(connection) {
 
 int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const std::string &outputFileNameEnv) const {
     const std::string selectQuery =
-        std::string("SELECT * FROM ") + tableName + std::string(";");
+            std::string("SELECT * FROM ") + tableName + std::string(";");
 
     PGresult *queryResult = nullptr;
 
@@ -106,7 +107,8 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
 }
 
 int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
-    const std::string selectQuery = std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
+    const std::string selectQuery =
+            std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
 
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, selectQuery.c_str());
@@ -134,52 +136,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
 
         std::cout << "Enter " << currentColumnName << ':'; // Prompt the user for input
 
-        // TODO: Add validations to the entered data
-        switch (PQftype(queryResult, i)) {
-            // Read different data types
-            case 1043: {
-                // VARCHAR
-                if (std::cin.peek() == '\n')
-                    std::cin.ignore();
-
-                std::string currentValue;
-                std::getline(std::cin, currentValue);
-
-                insertValues.push_back(currentValue);
-                break;
-            }
-            case 23: {
-                // INT4
-                int currentValue;
-                std::cin >> currentValue;
-
-                insertValues.push_back(std::to_string(currentValue));
-                break;
-            }
-            case 1700: {
-                // DECIMAL, NUMERIC
-                double currentValue;
-                std::cin >> currentValue;
-
-                insertValues.push_back(std::to_string(currentValue));
-                break;
-            }
-            case 1082: {
-                // DATE
-                std::string currentValue;
-                std::cin >> currentValue;
-
-                if (isSqlDateFormatValid(currentValue))
-                    insertValues.push_back(currentValue);
-                else
-                    std::cout << "Invalid date entered!";
-
-                break;
-            }
-            default: {
-                // TODO: add other type cases or write default behaviour
-            }
-        }
+        insertValues.push_back(readColumnValue(PQftype(queryResult, i)));
     }
 
     std::stringstream insertQueryStream{}; // Start to build the query
@@ -588,6 +545,79 @@ int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const 
 
     PQclear(createTableResult);
     return 0;
+}
+
+std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue) {
+    switch (dataTypeValue) {
+        // Read different data types
+        case 1043: {
+            // VARCHAR
+            std::string currentValue;
+            while (true) {
+                while (std::cin.peek() == '\n')
+                    std::cin.ignore();
+
+                std::getline(std::cin, currentValue);
+
+                if (!currentValue.empty())
+                    break;
+                std::cout << "Invalid VARCHAR value entered.\n";
+            }
+            return currentValue;
+        }
+        case 23: {
+            // INT4
+            int currentValue;
+            while (true) {
+                std::cin >> currentValue;
+
+                if (std::cin.fail()) {
+                    // If the input is invalid
+                    std::cin.clear(); // Clear the error flag
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
+                    std::cout << "Invalid INT4 value entered.\n";
+                } else {
+                    break;
+                }
+            }
+
+            return std::to_string(currentValue);
+        }
+        case 1700: {
+            // DECIMAL, NUMERIC
+            double currentValue;
+            while (true) {
+                std::cin >> currentValue;
+
+                if (std::cin.fail()) {
+                    // If the input is invalid
+                    std::cin.clear(); // Clear the error flag
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
+                    std::cout << "Invalid DECIMAL/NUMERIC value entered.\n";
+                } else {
+                    break;
+                }
+            }
+
+            return std::to_string(currentValue);
+        }
+        case 1082: {
+            // DATE
+            std::string currentValue;
+            while (true) {
+                std::cin >> currentValue;
+
+                if (isSqlDateFormatValid(currentValue)) break; // Fix: Removed unnecessary fail() check
+                std::cout << "Invalid DATE format. Use yyyy-MM-dd.\n";
+            }
+
+            return currentValue;
+        }
+        default: {
+            std::cout << "Value type not supported at the moment.\n";
+            return "";
+        }
+    }
 }
 
 
