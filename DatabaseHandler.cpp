@@ -14,6 +14,7 @@
 #define EMPTY_VALUE std::string("N/A")
 #define NO_COLUMN_FOUND(colName) (std::string("No column found with name ") + (colName) + std::string(".\n"))
 
+
 std::string repeat(const char &, const std::string::size_type &);
 
 std::string addRightPadding(const std::string &, const std::string::size_type &);
@@ -135,7 +136,14 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         }
 
         tableNames[i] = currentColumnName; // Add the column name to the arr
-        insertValues.push_back(readColumnValue(PQftype(queryResult, i), currentColumnName)); // Add the read data
+        std::string currentInsertValue = readColumnValue(PQftype(queryResult, i), currentColumnName); // Add the read data
+        if (currentInsertValue == EMPTY_VALUE) {
+            std::cout << "INSERT failed: Cannot insert one or more of the values.\n";
+            delete[] tableNames;
+            PQclear(queryResult);
+            return 1;
+        }
+        insertValues.push_back(currentInsertValue);
     }
 
     std::stringstream insertQueryStream{}; // Start to build the query
@@ -204,6 +212,11 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == updateColumn) {
             // Read different type of data type
             updateValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
+            if (updateValue == EMPTY_VALUE) {
+                std::cout << "UPDATE failed: Cannot update one or more of the values.\n";
+                PQclear(queryResult);
+                return 1;
+            }
             break;
         }
     }
@@ -224,6 +237,11 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == updateWhereColumn) {
             // Read different type of data type
             updateWhereValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
+            if (updateWhereValue == EMPTY_VALUE) {
+                std::cout << "UPDATE failed: Cannot update one or more of the values.\n";
+                PQclear(queryResult);
+                return 1;
+            }
             break;
         }
     }
@@ -287,6 +305,11 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
             // Read different type of data type
             std::cout << "Enter " << currentColumnName << " value:";
             deleteValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
+            if (deleteValue == EMPTY_VALUE) {
+                std::cout << "DELETE failed: Cannot delete one or more of the values.\n";
+                PQclear(queryResult);
+                return 1;
+            }
             break;
         }
     }
