@@ -454,6 +454,10 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::str
                     if (char *escapedValue = PQescapeLiteral(connection, currentValue.c_str(), currentValue.length())) {
                         std::string safeValue(escapedValue);
                         PQfreemem(escapedValue);
+
+                        if (safeValue.length() >= 2 && safeValue.front() == '\'' && safeValue.back() == '\'') {
+                            safeValue = safeValue.substr(1, safeValue.length() - 2);
+                        }
                         return safeValue;
                     }
                 }
