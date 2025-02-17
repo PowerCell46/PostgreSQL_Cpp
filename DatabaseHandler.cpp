@@ -11,7 +11,8 @@
 #define END_OF_COL_SEPARATOR " |"
 #define COMMA_SPACE_SEPARATOR std::string(", ")
 #define ESCAPE std::string("esc")
-
+#define EMPTY_VALUE std::string("N/A")
+#define NO_COLUMN_FOUND(colName) (std::string("No column found with name ") + (colName) + std::string(".\n"))
 
 std::string repeat(const char &, const std::string::size_type &);
 
@@ -119,7 +120,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         return 1;
     }
 
-    const int tableColumnsNumber = PQnfields(queryResult);
+    const int tableColumnsNumber = PQnfields(queryResult); // Number of Columns of the Table
     auto *tableNames = new std::string[tableColumnsNumber]{}; // Dynamic arr with the table names
     std::vector<std::string> insertValues; // Vector with the values
     bool skipId = false;
@@ -134,7 +135,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         }
 
         tableNames[i] = currentColumnName; // Add the column name to the arr
-        insertValues.push_back(readColumnValue(PQftype(queryResult, i), currentColumnName));
+        insertValues.push_back(readColumnValue(PQftype(queryResult, i), currentColumnName)); // Add the read data
     }
 
     std::stringstream insertQueryStream{}; // Start to build the query
@@ -208,7 +209,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
     }
 
     if (updateValue.empty()) { // TODO: Conflict if a diff data type returned ""
-        std::cout << "No column found with name " << updateColumn << ".\n";
+        std::cout << NO_COLUMN_FOUND(updateColumn);
         return 1;
     }
 
@@ -228,7 +229,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
     }
 
     if (updateWhereValue.empty()) { // TODO: Conflict if a diff data type returned ""
-        std::cout << "No column found with name " << updateColumn << ".\n";
+        std::cout << NO_COLUMN_FOUND(updateWhereColumn);
         return 1;
     }
 
@@ -291,7 +292,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
     }
 
     if (deleteValue.empty()) {
-        std::cout << "No column found with name " << deleteByColumn << "!";
+        std::cout << NO_COLUMN_FOUND(deleteByColumn);
         return 0;
     }
 
@@ -485,7 +486,7 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue, const std
         }
         default: {
             std::cout << "Value Type not supported at the moment.\n";
-            return "";
+            return EMPTY_VALUE;
         }
     }
 }
