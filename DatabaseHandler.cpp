@@ -29,6 +29,8 @@ std::vector<const char *> generateInsertParamValues(const std::vector<std::strin
 
 bool isSqlDateFormatValid(const std::string &);
 
+bool stringValueDoesNotContainInvalidChars(const std::string &);
+
 
 DatabaseHandler::DatabaseHandler(PGconn *connection): connection(connection) {
 }
@@ -514,6 +516,24 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue, const std
     }
 }
 
+std::string DatabaseHandler::readTableName() {
+    std::string tableName;
+    while (true) {
+        std::cout << "Enter Table name:";
+        std::getline(std::cin, tableName);
+
+        if (tableName.empty()) {
+            std::cout << "Invalid table name.\n";
+            continue;
+        }
+
+        if (stringValueDoesNotContainInvalidChars(tableName))
+            return tableName;
+
+        std::cout << "Invalid table name.\n";
+    }
+}
+
 
 std::string repeat(const char &ch, const std::string::size_type &times) {
     std::stringstream strStream{};
@@ -605,4 +625,10 @@ bool isSqlDateFormatValid(const std::string &dateStr) {
             && dateStr[6] >= '0' && dateStr[6] <= '9'
             && dateStr[8] >= '0' && dateStr[8] <= '9'
             && dateStr[9] >= '0' && dateStr[9] <= '9';
+}
+
+
+bool stringValueDoesNotContainInvalidChars(const std::string &strValue) {
+    return strValue
+           .find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == std::string::npos;
 }

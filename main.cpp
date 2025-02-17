@@ -53,9 +53,7 @@ int main() {
 
     // SQL operations
     /******************************************************************************************************************/
-    std::string tableName;
-    std::cout << "Enter Table name:";
-    std::cin >> tableName;
+    const std::string tableName = DatabaseHandler::readTableName();
 
     // database_handler.INSERT_SQL_QUERY(tableName);
 

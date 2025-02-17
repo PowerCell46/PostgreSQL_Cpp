@@ -7,7 +7,6 @@ class DatabaseHandler {
     PGconn *connection;
 
     static std::string readColumnValue(const Oid&, const std::string&);
-    // std::string readTableName(); // implement
 public:
     explicit DatabaseHandler(PGconn * connection);
 
@@ -26,4 +25,6 @@ public:
     int DROP_DATABASE_SQL_QUERY(const std::string &) const;
 
     int CREATE_TABLE_SQL_QUERY(const std::string &) const;
+
+    static std::string readTableName();
 };
