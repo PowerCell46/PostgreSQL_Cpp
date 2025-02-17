@@ -138,7 +138,8 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         }
 
         tableNames[i] = currentColumnName; // Add the column name to the arr
-        std::string currentInsertValue = readColumnValue(PQftype(queryResult, i), currentColumnName); // Add the read data
+        std::string currentInsertValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
+        // Add the read data
         if (currentInsertValue == EMPTY_VALUE) {
             std::cout << "INSERT failed: Cannot insert one or more of the values.\n";
             delete[] tableNames;
@@ -213,7 +214,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 
         if (currentColumnName == updateColumn) {
             // Read different type of data type
-            updateValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
+            updateValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
             if (updateValue == EMPTY_VALUE) {
                 std::cout << "UPDATE failed: Cannot update one or more of the values.\n";
                 PQclear(queryResult);
@@ -223,7 +224,8 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         }
     }
 
-    if (updateValue.empty()) { // TODO: Conflict if a diff data type returned ""
+    if (updateValue.empty()) {
+        // TODO: Conflict if a diff data type returned ""
         std::cout << NO_COLUMN_FOUND(updateColumn);
         return 1;
     }
@@ -238,7 +240,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 
         if (currentColumnName == updateWhereColumn) {
             // Read different type of data type
-            updateWhereValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
+            updateWhereValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
             if (updateWhereValue == EMPTY_VALUE) {
                 std::cout << "UPDATE failed: Cannot update one or more of the values.\n";
                 PQclear(queryResult);
@@ -248,7 +250,8 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         }
     }
 
-    if (updateWhereValue.empty()) { // TODO: Conflict if a diff data type returned ""
+    if (updateWhereValue.empty()) {
+        // TODO: Conflict if a diff data type returned ""
         std::cout << NO_COLUMN_FOUND(updateWhereColumn);
         return 1;
     }
@@ -306,7 +309,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == deleteByColumn) {
             // Read different type of data type
             std::cout << "Enter " << currentColumnName << " value:";
-            deleteValue = readColumnValue(PQftype(queryResult, i), currentColumnName);
+            deleteValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
             if (deleteValue == EMPTY_VALUE) {
                 std::cout << "DELETE failed: Cannot delete one or more of the values.\n";
                 PQclear(queryResult);
@@ -434,38 +437,40 @@ int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const 
     return 0;
 }
 
-std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue, const std::string& columnName) {
-    switch (dataTypeValue) {
-        // Read different data types
+std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::string &columnName, PGconn *connection) {
+    switch (dataType) {
         case 1043: {
             // VARCHAR
             std::string currentValue;
             while (true) {
-                std::cout << "Enter " << columnName << ":";
+                std::cout << "Enter " << columnName << ": ";
 
                 while (std::cin.peek() == '\n')
                     std::cin.ignore();
 
                 std::getline(std::cin, currentValue);
 
-                if (!currentValue.empty())
-                    break;
+                if (!currentValue.empty()) {
+                    if (char *escapedValue = PQescapeLiteral(connection, currentValue.c_str(), currentValue.length())) {
+                        std::string safeValue(escapedValue);
+                        PQfreemem(escapedValue);
+                        return safeValue;
+                    }
+                }
                 std::cout << "Invalid VARCHAR value entered.\n";
             }
-            return currentValue;
         }
         case 23: {
             // INT4
             int currentValue;
+
             while (true) {
                 std::cout << "Enter " << columnName << ":";
-
                 std::cin >> currentValue;
 
                 if (std::cin.fail()) {
-                    // If the input is invalid
-                    std::cin.clear(); // Clear the error flag
-                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                     std::cout << "Invalid INT4 value entered.\n";
                 } else {
                     break;
@@ -479,13 +484,11 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue, const std
             double currentValue;
             while (true) {
                 std::cout << "Enter " << columnName << ":";
-
                 std::cin >> currentValue;
 
                 if (std::cin.fail()) {
-                    // If the input is invalid
-                    std::cin.clear(); // Clear the error flag
-                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                     std::cout << "Invalid DECIMAL/NUMERIC value entered.\n";
                 } else {
                     break;
@@ -499,14 +502,12 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataTypeValue, const std
             std::string currentValue;
             while (true) {
                 std::cout << "Enter " << columnName << ":";
-
                 std::cin >> currentValue;
 
                 if (isSqlDateFormatValid(currentValue))
                     break;
                 std::cout << "Invalid DATE format. Use yyyy-MM-dd.\n";
             }
-
             return currentValue;
         }
         default: {

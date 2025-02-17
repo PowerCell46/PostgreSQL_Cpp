@@ -6,9 +6,10 @@
 class DatabaseHandler {
     PGconn *connection;
 
-    static std::string readColumnValue(const Oid&, const std::string&);
+    static std::string readColumnValue(const Oid &, const std::string &, PGconn *);
+
 public:
-    explicit DatabaseHandler(PGconn * connection);
+    explicit DatabaseHandler(PGconn *connection);
 
     int SELECT_ALL_SQL_QUERY(const std::string &, const std::string &) const;
 
