@@ -11,6 +11,8 @@ class DatabaseHandler {
 public:
     explicit DatabaseHandler(PGconn *connection);
 
+    int SELECT_ALL_TABLES_SQL_QUERY(const std::string&) const;
+
     int SELECT_ALL_SQL_QUERY(const std::string &, const std::string &) const;
 
     int INSERT_SQL_QUERY(const std::string &) const;

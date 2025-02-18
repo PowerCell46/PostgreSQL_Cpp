@@ -10,13 +10,15 @@
 
 #define POSTGRE_SQL_ADMIN_ENV_NAME "POSTGRE_SQL_ADMIN"
 #define POSTGRE_SQL_ADMIN_ENV_PASS "POSTGRE_SQL_PASS"
-#define OUTPUT_FILE_ENV "OUTPUT_FILE"
+#define SELECT_OUTPUT_FILE_ENV "SELECT_OUTPUT_FILE"
+#define TABLES_OUTPUT_FILE "TABLES_OUTPUT_FILE"
 
 
 int main() {
     const char *userEnv = std::getenv(POSTGRE_SQL_ADMIN_ENV_NAME);
     const char *passEnv = std::getenv(POSTGRE_SQL_ADMIN_ENV_PASS);
-    const char *outputFileNameEnv = std::getenv(OUTPUT_FILE_ENV);
+    const char *selectOutputFileNameEnv = std::getenv(SELECT_OUTPUT_FILE_ENV);
+    const char *tablesOutputFileEnv = std::getenv(TABLES_OUTPUT_FILE);
 
     if (userEnv == nullptr || passEnv == nullptr) {
         std::cerr
@@ -25,9 +27,15 @@ int main() {
         return 1;
     }
 
-    if (outputFileNameEnv == nullptr) {
+    if (selectOutputFileNameEnv == nullptr) {
         std::cerr
-                << "Error: Environment variable " << OUTPUT_FILE_ENV << " is not set.\n";
+                << "Error: Environment variable " << SELECT_OUTPUT_FILE_ENV << " is not set.\n";
+        return 1;
+    }
+
+    if (tablesOutputFileEnv == nullptr) {
+        std::cerr
+                << "Error: Environment variable " << TABLES_OUTPUT_FILE << " is not set.\n";
         return 1;
     }
 
@@ -55,7 +63,7 @@ int main() {
     /******************************************************************************************************************/
     const std::string tableName = DatabaseHandler::readTableName();
 
-    database_handler.INSERT_SQL_QUERY(tableName);
+    // database_handler.INSERT_SQL_QUERY(tableName);
 
     // database_handler.UPDATE_SQL_QUERY(tableName);
 
@@ -73,9 +81,12 @@ int main() {
 
     // database_handler.DROP_DATABASE_SQL_QUERY(databaseName);
 
-    database_handler.SELECT_ALL_SQL_QUERY(tableName, outputFileNameEnv);
+    database_handler.SELECT_ALL_SQL_QUERY(tableName, selectOutputFileNameEnv);
+
+    // database_handler.SELECT_ALL_TABLES_SQL_QUERY(tablesOutputFileEnv);
 
     PQfinish(connection);
 
     return 0;
 }
+

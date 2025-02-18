@@ -12,6 +12,7 @@
 #define COMMA_SPACE_SEPARATOR std::string(", ")
 #define ESCAPE std::string("esc")
 #define EMPTY_VALUE std::string("N/A")
+#define SELECT_TABLE_NAMES_COL_TITLE std::string("Table Name")
 #define NO_COLUMN_FOUND(colName) (std::string("No column found with name ") + (colName) + std::string(".\n"))
 
 
@@ -33,6 +34,55 @@ bool stringValueDoesNotContainInvalidChars(const std::string &);
 
 
 DatabaseHandler::DatabaseHandler(PGconn *connection): connection(connection) {
+}
+
+int DatabaseHandler::SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNameEnv) const {
+    std::ofstream fileStream{outputFileNameEnv};
+
+    const std::string selectTableNamesQuery
+            = "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';";
+
+    PGresult *queryResult = PQexec(connection, selectTableNamesQuery.c_str());
+
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
+        fprintf(stderr, "%s[%d]: Select failed: %s\n",
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+        return 1;
+    }
+
+    auto biggestWidth = SELECT_TABLE_NAMES_COL_TITLE.length() + 1;
+    // Find the longest STR in order to calculate the width of the column
+    for (int i = 0; i < PQntuples(queryResult); ++i) {
+        std::string tableName(PQgetvalue(queryResult, i, 0));
+        if (tableName.length() > biggestWidth)
+            biggestWidth = tableName.length();
+    }
+
+    // Table Head
+    fileStream << repeat(TABLE_ROW_SEPARATOR, biggestWidth + 2) << '\n';
+
+    // Table Column Name
+    fileStream
+            << TABLE_COL_SEPARATOR << addRightPadding(SELECT_TABLE_NAMES_COL_TITLE, biggestWidth)
+            << TABLE_COL_SEPARATOR << '\n'
+            << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, biggestWidth)
+            << TABLE_COL_SEPARATOR << '\n';
+
+    // Table Data
+    for (int i = 0; i < PQntuples(queryResult); ++i) {
+        std::string tableName(PQgetvalue(queryResult, i, 0));
+        fileStream
+                << TABLE_COL_SEPARATOR << addRightPadding(tableName, biggestWidth)
+                << TABLE_COL_SEPARATOR << '\n' << TABLE_COL_SEPARATOR
+                << repeat(BETWEEN_ROWS_SEPARATOR, biggestWidth) << TABLE_COL_SEPARATOR << '\n';
+    }
+    // Table Tail
+    fileStream << repeat(TABLE_ROW_SEPARATOR, biggestWidth + 2) << '\n';
+
+    PQclear(queryResult);
+
+    return 0;
 }
 
 int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const std::string &outputFileNameEnv) const {
