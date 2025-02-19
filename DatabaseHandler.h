@@ -23,7 +23,7 @@ public:
 
     int INSERT_SQL_QUERY(const std::string &tableName) const;
 
-    int UPDATE_SQL_QUERY(const std::string &) const;
+    int UPDATE_SQL_QUERY(const std::string &tableName) const;
 
     int DELETE_SQL_QUERY(const std::string &) const;
 

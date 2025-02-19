@@ -24,8 +24,6 @@ std::string addRightPadding(const std::string &, const std::string::size_type &)
 
 std::string createBetweenRowsRow(const std::string::size_type *, const int &);
 
-std::string join(const std::string *, const int &, const std::string &);
-
 std::string join(const std::vector<std::string> &, const std::string &);
 
 std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &);
@@ -76,7 +74,8 @@ int DatabaseHandler::SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNa
         std::string tableName(PQgetvalue(queryResult, i, 0));
         fileStream
                 << TABLE_COL_SEPARATOR << addRightPadding(tableName, biggestCharWidth) << TABLE_COL_SEPARATOR << '\n'
-                << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, biggestCharWidth) << TABLE_COL_SEPARATOR << '\n';
+                << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, biggestCharWidth) << TABLE_COL_SEPARATOR <<
+                '\n';
     }
 
     // Table Tail
@@ -109,7 +108,8 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
     return 0;
 }
 
-int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFileNamePath) const {
+int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName,
+                                              const std::string &outputFileNamePath) const {
     // Make a query to get the column names
     std::string selectQuery =
             std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
@@ -148,7 +148,8 @@ int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, cons
     }
 
     selectQuery =
-            std::string("SELECT ") + join(selectColumnNames, COMMA_SPACE_SEPARATOR) + std::string(" FROM ") + tableName + std::string(";");
+            std::string("SELECT ") + join(selectColumnNames, COMMA_SPACE_SEPARATOR) + std::string(" FROM ") + tableName
+            + std::string(";");
 
     queryResult = PQexec(connection, selectQuery.c_str());
 
@@ -189,7 +190,8 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
     for (int i = 0; i < tableColumnsNumber; i++) {
         // Read the column value and keep it
         std::string currentColumnName{PQfname(queryResult, i)};
-        if (currentColumnName == "id") { // Skip id (Most times it's Serial)
+        if (currentColumnName == "id") {
+            // Skip id (Most times it's Serial)
             continue;
         }
 
@@ -244,6 +246,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
 }
 
 int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
+    // Make a query to get the column names
     const std::string selectQuery =
             std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
 
@@ -257,7 +260,6 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         return 1;
     }
 
-    const char *paramValues[2];
     std::string updateColumn, updateValue{};
 
     std::cout << "Enter the name of the Column you wish to update:"; // Prompt the user to enter column
@@ -279,7 +281,6 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
     }
 
     if (updateValue.empty()) {
-        // TODO: Conflict if a diff data type returned ""
         std::cout << NO_COLUMN_FOUND(updateColumn);
         return 1;
     }
@@ -305,13 +306,15 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
     }
 
     if (updateWhereValue.empty()) {
-        // TODO: Conflict if a diff data type returned ""
         std::cout << NO_COLUMN_FOUND(updateWhereColumn);
         return 1;
     }
 
-    paramValues[0] = updateValue.c_str();
-    paramValues[1] = updateWhereValue.c_str();
+    const char *paramValues[2]{
+        updateValue.c_str(),
+        updateWhereValue.c_str()
+    };
+
     const std::string updateQuery =
             std::string("UPDATE ") + tableName + std::string(" SET ") +
             updateColumn + std::string(" = $1 WHERE ") + updateWhereColumn + std::string(" = $2;");
@@ -338,6 +341,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 }
 
 int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
+    // Make a query to get the column names
     const std::string selectQuery =
             std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
 
@@ -363,6 +367,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == deleteByColumn) {
             // Read different type of data type
             std::cout << "Enter " << currentColumnName << " value:";
+
             deleteValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
             if (deleteValue == EMPTY_VALUE) {
                 std::cout << "DELETE failed: Cannot delete one or more of the values.\n";
@@ -402,6 +407,39 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
     }
 
     PQclear(deleteResult);
+    return 0;
+}
+
+int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const {
+    std::vector<std::string> columnDefinitions;
+
+    std::cin.ignore();
+    while (true) {
+        std::cout << "Enter column definition line or '" << ESCAPE << "':";
+
+        std::string currentColumnDefinition;
+        std::getline(std::cin, currentColumnDefinition);
+        if (currentColumnDefinition == ESCAPE)
+            break;
+
+        columnDefinitions.push_back(currentColumnDefinition);
+    }
+
+    std::string createTableQuery =
+            std::string("CREATE TABLE IF NOT EXISTS ")
+            + tableName + std::string(" (")
+            + join(columnDefinitions, COMMA_SPACE_SEPARATOR) + std::string(");");
+
+    PGresult *createTableResult = PQexec(connection, createTableQuery.c_str());
+
+    if (PQresultStatus(createTableResult) != PGRES_COMMAND_OK) {
+        std::cerr << "CREATE TABLE failed: " << PQerrorMessage(connection) << '\n';
+        return 1;
+    }
+
+    std::cout << "CREATE TABLE operation was successful.\n";
+
+    PQclear(createTableResult);
     return 0;
 }
 
@@ -455,39 +493,6 @@ int DatabaseHandler::DROP_DATABASE_SQL_QUERY(const std::string &databaseName) co
     std::cout << "DROP DATABASE operation was successful.\n";
 
     PQclear(dropDatabaseResult);
-    return 0;
-}
-
-int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const {
-    std::vector<std::string> columnDefinitions;
-
-    std::cin.ignore();
-    while (true) {
-        std::cout << "Enter column definition line or '" << ESCAPE << "':";
-
-        std::string currentColumnDefinition;
-        std::getline(std::cin, currentColumnDefinition);
-        if (currentColumnDefinition == ESCAPE)
-            break;
-
-        columnDefinitions.push_back(currentColumnDefinition);
-    }
-
-    std::string createTableQuery =
-            std::string("CREATE TABLE IF NOT EXISTS ")
-            + tableName + std::string(" (")
-            + join(columnDefinitions, COMMA_SPACE_SEPARATOR) + std::string(");");
-
-    PGresult *createTableResult = PQexec(connection, createTableQuery.c_str());
-
-    if (PQresultStatus(createTableResult) != PGRES_COMMAND_OK) {
-        std::cerr << "CREATE TABLE failed: " << PQerrorMessage(connection) << '\n';
-        return 1;
-    }
-
-    std::cout << "CREATE TABLE operation was successful.\n";
-
-    PQclear(createTableResult);
     return 0;
 }
 
@@ -597,7 +602,7 @@ std::string DatabaseHandler::readTableName() {
     return readDatabaseIdentifier(TABLE);
 }
 
-int DatabaseHandler::writeSelectQueryResult(const std::string& outputFileNameEnv, const PGresult * queryResult) {
+int DatabaseHandler::writeSelectQueryResult(const std::string &outputFileNameEnv, const PGresult *queryResult) {
     std::ofstream fileStream{outputFileNameEnv};
 
     auto *columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
@@ -686,23 +691,6 @@ std::string createBetweenRowsRow(const std::string::size_type *columnWidths, con
 
     for (int i = 0; i < colWidthsSize; ++i)
         resultStream << repeat(BETWEEN_ROWS_SEPARATOR, columnWidths[i] + 1) << TABLE_COL_SEPARATOR;
-
-    return resultStream.str();
-}
-
-
-std::string join(const std::string *elements, const int &size, const std::string &separator) {
-    if (size < 1)
-        return "";
-
-    std::stringstream resultStream{};
-
-    for (int i = 0; i < size - 1; ++i) {
-        if (elements[i].empty())
-            continue;
-        resultStream << elements[i] << separator;
-    }
-    resultStream << elements[size - 1];
 
     return resultStream.str();
 }
