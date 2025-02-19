@@ -63,7 +63,7 @@ int main() {
     /******************************************************************************************************************/
     const std::string tableName = DatabaseHandler::readTableName();
 
-    // database_handler.INSERT_SQL_QUERY(tableName);
+    database_handler.INSERT_SQL_QUERY(tableName);
 
     // database_handler.UPDATE_SQL_QUERY(tableName);
 
@@ -83,9 +83,9 @@ int main() {
 
     // database_handler.SELECT_ALL_SQL_QUERY(tableName, selectOutputFileNameEnv);
 
-    database_handler.SELECT_COLUMNS_SQL_QUERY(tableName, selectOutputFileNameEnv);
+    // database_handler.SELECT_COLUMNS_SQL_QUERY(tableName, selectOutputFileNameEnv);
 
-    // database_handler.SELECT_ALL_TABLES_SQL_QUERY(tableName);
+    database_handler.SELECT_ALL_TABLES_SQL_QUERY(tableName);
 
     PQfinish(connection);
 
