@@ -36,6 +36,7 @@ bool stringValueDoesNotContainInvalidChars(const std::string &);
 DatabaseHandler::DatabaseHandler(PGconn *connection): connection(connection) {
 }
 
+
 int DatabaseHandler::SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNamePath) const {
     std::ofstream fileStream{outputFileNamePath};
 
@@ -108,8 +109,7 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
     return 0;
 }
 
-int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName,
-                                              const std::string &outputFileNamePath) const {
+int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFileNamePath) const {
     // Make a query to get the column names
     std::string selectQuery =
             std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
@@ -316,8 +316,8 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
     };
 
     const std::string updateQuery =
-            std::string("UPDATE ") + tableName + std::string(" SET ") +
-            updateColumn + std::string(" = $1 WHERE ") + updateWhereColumn + std::string(" = $2;");
+            std::string("UPDATE ") + tableName + std::string(" SET ") + updateColumn +
+            std::string(" = $1 WHERE ") + updateWhereColumn + std::string(" = $2;");
 
     PGresult *updateResult = PQexecParams(
         connection,
@@ -355,7 +355,6 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         return 1;
     }
 
-    const char *paramValues[1];
     std::string deleteByColumn, deleteValue{};
 
     std::cout << "Enter the name of the column by you wish to delete:"; // Prompt the user to enter Delete column
@@ -383,7 +382,8 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         return 0;
     }
 
-    paramValues[0] = deleteValue.c_str();
+    const char *paramValues[1]{deleteValue.c_str()};
+
     const std::string deleteQuery =
             std::string("DELETE FROM ") + tableName +
             std::string(" WHERE ") + deleteByColumn +
@@ -411,6 +411,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
 }
 
 int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const {
+    // TODO: Add permissions -> only auth users can create tables
     std::vector<std::string> columnDefinitions;
 
     std::cin.ignore();
@@ -425,7 +426,7 @@ int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const 
         columnDefinitions.push_back(currentColumnDefinition);
     }
 
-    std::string createTableQuery =
+    const std::string createTableQuery =
             std::string("CREATE TABLE IF NOT EXISTS ")
             + tableName + std::string(" (")
             + join(columnDefinitions, COMMA_SPACE_SEPARATOR) + std::string(");");
@@ -495,6 +496,7 @@ int DatabaseHandler::DROP_DATABASE_SQL_QUERY(const std::string &databaseName) co
     PQclear(dropDatabaseResult);
     return 0;
 }
+
 
 std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::string &columnName, PGconn *connection) {
     switch (dataType) {

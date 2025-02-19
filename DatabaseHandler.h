@@ -6,11 +6,11 @@
 class DatabaseHandler {
     PGconn *connection;
 
-    static std::string readColumnValue(const Oid &, const std::string &, PGconn *);
+    static std::string readColumnValue(const Oid &dataType, const std::string &columnName, PGconn *connection);
 
-    static int writeSelectQueryResult(const std::string &, const PGresult *);
+    static int writeSelectQueryResult(const std::string &outputFileNameEnv, const PGresult *queryResult);
 
-    static std::string readDatabaseIdentifier(const std::string &);
+    static std::string readDatabaseIdentifier(const std::string &identifierType);
 
 public:
     explicit DatabaseHandler(PGconn *connection);
@@ -25,15 +25,15 @@ public:
 
     int UPDATE_SQL_QUERY(const std::string &tableName) const;
 
-    int DELETE_SQL_QUERY(const std::string &) const;
+    int DELETE_SQL_QUERY(const std::string &tableName) const;
 
-    int TRUNCATE_SQL_QUERY(const std::string &) const;
+    int CREATE_TABLE_SQL_QUERY(const std::string &tableName) const;
 
-    int DROP_TABLE_SQL_QUERY(const std::string &) const;
+    int TRUNCATE_SQL_QUERY(const std::string &tableName) const;
 
-    int DROP_DATABASE_SQL_QUERY(const std::string &) const;
+    int DROP_TABLE_SQL_QUERY(const std::string &tableName) const;
 
-    int CREATE_TABLE_SQL_QUERY(const std::string &) const;
+    int DROP_DATABASE_SQL_QUERY(const std::string &databaseName) const;
 
     static std::string readTableName();
 };
