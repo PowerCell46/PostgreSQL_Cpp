@@ -8,12 +8,17 @@ class DatabaseHandler {
 
     static std::string readColumnValue(const Oid &, const std::string &, PGconn *);
 
+    static int writeSelectQueryResult(const std::string&, const PGresult *);
+
+    static std::string readDatabaseIdentifier(const std::string &);
 public:
     explicit DatabaseHandler(PGconn *connection);
 
     int SELECT_ALL_TABLES_SQL_QUERY(const std::string&) const;
 
     int SELECT_ALL_SQL_QUERY(const std::string &, const std::string &) const;
+
+    int SELECT_COLUMNS_SQL_QUERY(const std::string &, const std::string &) const;
 
     int INSERT_SQL_QUERY(const std::string &) const;
 

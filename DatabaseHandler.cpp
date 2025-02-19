@@ -11,6 +11,8 @@
 #define END_OF_COL_SEPARATOR " |"
 #define COMMA_SPACE_SEPARATOR std::string(", ")
 #define ESCAPE std::string("esc")
+#define TABLE std::string("Table")
+#define COLUMN std::string("Column")
 #define EMPTY_VALUE std::string("N/A")
 #define SELECT_TABLE_NAMES_COL_TITLE std::string("Table Name")
 #define NO_COLUMN_FOUND(colName) (std::string("No column found with name ") + (colName) + std::string(".\n"))
@@ -73,9 +75,8 @@ int DatabaseHandler::SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNa
     for (int i = 0; i < PQntuples(queryResult); ++i) {
         std::string tableName(PQgetvalue(queryResult, i, 0));
         fileStream
-                << TABLE_COL_SEPARATOR << addRightPadding(tableName, biggestWidth)
-                << TABLE_COL_SEPARATOR << '\n' << TABLE_COL_SEPARATOR
-                << repeat(BETWEEN_ROWS_SEPARATOR, biggestWidth) << TABLE_COL_SEPARATOR << '\n';
+                << TABLE_COL_SEPARATOR << addRightPadding(tableName, biggestWidth) << TABLE_COL_SEPARATOR << '\n'
+                << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, biggestWidth) << TABLE_COL_SEPARATOR << '\n';
     }
     // Table Tail
     fileStream << repeat(TABLE_ROW_SEPARATOR, biggestWidth + 2) << '\n';
@@ -100,62 +101,65 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
         return 1;
     }
 
-    std::ofstream fileStream{outputFileNameEnv};
+    writeSelectQueryResult(outputFileNameEnv, queryResult);
 
-    auto *columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
-
-    // Calculate the width of every column (Table Col Names)
-    for (int i = 0; i < PQnfields(queryResult); i++) {
-        std::string currentColumnName{PQfname(queryResult, i)};
-        columnWidths[i] = currentColumnName.length();
-    }
-
-    // Calculate the width of every column (Table Row Cols)
-    for (int i = 0; i < PQntuples(queryResult); i++) {
-        for (int j = 0; j < PQnfields(queryResult); j++) {
-            std::string currentValue{PQgetvalue(queryResult, i, j)};
-            columnWidths[j] = std::max(columnWidths[j], currentValue.length());
-        }
-    }
-
-    // Calculate the total char number of a row
-    std::string::size_type totalSymbolsSize = 1;
-    for (int i = 0; i < PQnfields(queryResult); i++)
-        totalSymbolsSize += columnWidths[i] + 2;
-
-    // Print the table Head
-    fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n' << TABLE_COL_SEPARATOR;
-
-    // Print the table Column names
-    for (int i = 0; i < PQnfields(queryResult); i++) {
-        std::string currentColumnName{PQfname(queryResult, i)};
-        fileStream << addRightPadding(currentColumnName, columnWidths[i]) << END_OF_COL_SEPARATOR;
-    }
-
-    // Print the first in between row
-    fileStream << '\n' << createBetweenRowsRow(columnWidths, PQnfields(queryResult)) << '\n';
-
-    // Print the Table contents
-    for (int i = 0; i < PQntuples(queryResult); i++) {
-        fileStream << TABLE_COL_SEPARATOR;
-        for (int j = 0; j < PQnfields(queryResult); j++) {
-            std::string currentValue{PQgetvalue(queryResult, i, j)};
-            // Print the current row
-            fileStream << addRightPadding(currentValue, columnWidths[j]) << END_OF_COL_SEPARATOR;
-        }
-        // Print the in between row
-        fileStream << '\n' << createBetweenRowsRow(columnWidths, PQnfields(queryResult)) << '\n';
-    }
-
-    // Print the table tail
-    fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n';
-    std::cout << "SELECT operation was successful.\n";
-
-    delete columnWidths;
-
-    fileStream.close();
     PQclear(queryResult);
 
+    return 0;
+}
+
+int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFileNameEnv) const {
+    std::string selectQuery =
+            std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
+
+    PGresult *queryResult = nullptr;
+
+    queryResult = PQexec(connection, selectQuery.c_str());
+
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
+        fprintf(stderr, "%s[%d]: Select failed: %s\n",
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+        return 1;
+    }
+
+    std::vector<std::string> selectColumnNames;
+
+    while (true) {
+        std::string currentSelectedColumn = readDatabaseIdentifier(COLUMN);
+        if (currentSelectedColumn == ESCAPE)
+            break;
+
+        bool found = false;
+
+        for (int i = 0; i < PQnfields(queryResult); i++) {
+            std::string columnName{PQfname(queryResult, i)};
+
+            if (columnName == currentSelectedColumn) {
+                selectColumnNames.push_back(currentSelectedColumn);
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            std::cout << NO_COLUMN_FOUND(currentSelectedColumn);
+    }
+
+    selectQuery =
+            std::string("SELECT ") + join(selectColumnNames, COMMA_SPACE_SEPARATOR) + std::string(" FROM ") + tableName + std::string(";");
+
+    queryResult = PQexec(connection, selectQuery.c_str());
+
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
+        // Not successful SQL query
+        fprintf(stderr, "%s[%d]: Select failed: %s\n",
+                __FILE__, __LINE__, PQresultErrorMessage(queryResult));
+        return 1;
+    }
+
+    writeSelectQueryResult(outputFileNameEnv, queryResult);
+
+    PQclear(queryResult);
     return 0;
 }
 
@@ -571,10 +575,10 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::str
     }
 }
 
-std::string DatabaseHandler::readTableName() {
+std::string DatabaseHandler::readDatabaseIdentifier(const std::string &identifierType) {
     std::string tableName;
     while (true) {
-        std::cout << "Enter Table name:";
+        std::cout << "Enter " << identifierType << " name:";
         std::getline(std::cin, tableName);
 
         if (tableName.empty()) {
@@ -587,6 +591,68 @@ std::string DatabaseHandler::readTableName() {
 
         std::cout << "Invalid table name.\n";
     }
+}
+
+std::string DatabaseHandler::readTableName() {
+    return readDatabaseIdentifier(TABLE);
+}
+
+int DatabaseHandler::writeSelectQueryResult(const std::string& outputFileNameEnv, const PGresult * queryResult) {
+    std::ofstream fileStream{outputFileNameEnv};
+
+    auto *columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
+
+    // Calculate the width of every column (Table Col Names)
+    for (int i = 0; i < PQnfields(queryResult); i++) {
+        std::string currentColumnName{PQfname(queryResult, i)};
+        columnWidths[i] = currentColumnName.length();
+    }
+
+    // Calculate the width of every column (Table Row Cols)
+    for (int i = 0; i < PQntuples(queryResult); i++) {
+        for (int j = 0; j < PQnfields(queryResult); j++) {
+            std::string currentValue{PQgetvalue(queryResult, i, j)};
+            columnWidths[j] = std::max(columnWidths[j], currentValue.length());
+        }
+    }
+
+    // Calculate the total char number of a row
+    std::string::size_type totalSymbolsSize = 1;
+    for (int i = 0; i < PQnfields(queryResult); i++)
+        totalSymbolsSize += columnWidths[i] + 2;
+
+    // Print the table Head
+    fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n' << TABLE_COL_SEPARATOR;
+
+    // Print the table Column names
+    for (int i = 0; i < PQnfields(queryResult); i++) {
+        std::string currentColumnName{PQfname(queryResult, i)};
+        fileStream << addRightPadding(currentColumnName, columnWidths[i]) << END_OF_COL_SEPARATOR;
+    }
+
+    // Print the first in between row
+    fileStream << '\n' << createBetweenRowsRow(columnWidths, PQnfields(queryResult)) << '\n';
+
+    // Print the Table contents
+    for (int i = 0; i < PQntuples(queryResult); i++) {
+        fileStream << TABLE_COL_SEPARATOR;
+        for (int j = 0; j < PQnfields(queryResult); j++) {
+            std::string currentValue{PQgetvalue(queryResult, i, j)};
+            // Print the current row
+            fileStream << addRightPadding(currentValue, columnWidths[j]) << END_OF_COL_SEPARATOR;
+        }
+        // Print the in between row
+        fileStream << '\n' << createBetweenRowsRow(columnWidths, PQnfields(queryResult)) << '\n';
+    }
+
+    // Print the table tail
+    fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n';
+    std::cout << "SELECT operation was successful.\n";
+
+    delete columnWidths;
+
+    fileStream.close();
+    return 0;
 }
 
 

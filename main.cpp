@@ -81,9 +81,11 @@ int main() {
 
     // database_handler.DROP_DATABASE_SQL_QUERY(databaseName);
 
-    database_handler.SELECT_ALL_SQL_QUERY(tableName, selectOutputFileNameEnv);
+    // database_handler.SELECT_ALL_SQL_QUERY(tableName, selectOutputFileNameEnv);
 
-    // database_handler.SELECT_ALL_TABLES_SQL_QUERY(tablesOutputFileEnv);
+    database_handler.SELECT_COLUMNS_SQL_QUERY(tableName, selectOutputFileNameEnv);
+
+    // database_handler.SELECT_ALL_TABLES_SQL_QUERY(tableName);
 
     PQfinish(connection);
 
