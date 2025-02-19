@@ -412,6 +412,9 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
 }
 
 int DatabaseHandler::EXECUTE_SQL_QUERY() const {
+    if (!validateUserCredentials())
+        return 1;
+
     std::string customQuery;
     std::cout << "Enter SQL query to be executed:";
     std::getline(std::cin, customQuery);
@@ -435,7 +438,6 @@ int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const 
     // TODO: Add permissions -> only auth users can create tables
     std::vector<std::string> columnDefinitions;
 
-    std::cin.ignore();
     while (true) {
         std::cout << "Enter column definition line or '" << ESCAPE << "':";
 
@@ -683,6 +685,37 @@ int DatabaseHandler::writeSelectQueryResult(const std::string &outputFileNameEnv
     return 0;
 }
 
+bool DatabaseHandler::validateUserCredentials() const {
+    constexpr auto VARCHAR_CODE_VALUE = 1043;
+
+    const char * paramValues[2]{
+        readColumnValue(VARCHAR_CODE_VALUE, "Username", connection).c_str(),
+        readColumnValue(VARCHAR_CODE_VALUE, "Password", connection).c_str()
+    };
+
+    std::string selectAccountQuery =
+            std::string("SELECT * FROM account WHERE username = $1 AND password = $2;");
+
+    PGresult *selectAccountResult = PQexecParams(
+        connection,
+        selectAccountQuery.c_str(),
+        2, // Number of parameters
+        nullptr, // Parameter types (NULL = infer from query)
+        paramValues, // Parameter values
+        nullptr, // Parameter lengths (NULL = assume text)
+        nullptr, // Parameter formats (NULL = assume text)
+        0 // Result format: 0 for text, 1 for binary
+    );
+
+    if (PQresultStatus(selectAccountResult) != PGRES_TUPLES_OK) {
+        std::cerr << "SELECT failed: " << PQerrorMessage(connection) << std::endl;
+        return false;
+    }
+    std::cout << "Success";
+
+    PQclear(selectAccountResult);
+    return false;
+}
 
 std::string repeat(const char &ch, const std::string::size_type &times) {
     std::stringstream strStream{};

@@ -12,6 +12,8 @@ class DatabaseHandler {
 
     static std::string readDatabaseIdentifier(const std::string &identifierType);
 
+    bool validateUserCredentials() const;
+
 public:
     explicit DatabaseHandler(PGconn *connection);
 
