@@ -27,6 +27,8 @@ public:
 
     int DELETE_SQL_QUERY(const std::string &tableName) const;
 
+    int EXECUTE_SQL_QUERY() const;
+
     int CREATE_TABLE_SQL_QUERY(const std::string &tableName) const;
 
     int TRUNCATE_SQL_QUERY(const std::string &tableName) const;

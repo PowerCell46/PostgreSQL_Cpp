@@ -109,7 +109,8 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
     return 0;
 }
 
-int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFileNamePath) const {
+int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName,
+                                              const std::string &outputFileNamePath) const {
     // Make a query to get the column names
     std::string selectQuery =
             std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
@@ -407,6 +408,26 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
     }
 
     PQclear(deleteResult);
+    return 0;
+}
+
+int DatabaseHandler::EXECUTE_SQL_QUERY() const {
+    std::string customQuery;
+    std::cout << "Enter SQL query to be executed:";
+    std::getline(std::cin, customQuery);
+
+    PGresult *customQueryResult = nullptr;
+    customQueryResult = PQexec(connection, customQuery.c_str());
+
+    if (PQresultStatus(customQueryResult) != PGRES_COMMAND_OK) {
+        std::cerr << "CUSTOM QUERY failed: " << PQerrorMessage(connection) << std::endl;
+        PQclear(customQueryResult);
+        return 1;
+    }
+
+    std::cout << "CUSTOM QUERY operation was successful.\n";
+
+    PQclear(customQueryResult);
     return 0;
 }
 
