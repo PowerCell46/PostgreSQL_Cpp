@@ -6,9 +6,11 @@
 class DatabaseHandler {
     PGconn *connection;
 
+    // Read different types of cells, validate and parse them to a str
     static std::string readColumnValue(const Oid &dataType, const std::string &columnName, PGconn *connection);
 
-    static int writeSelectQueryResult(const std::string &outputFileNameEnv, const PGresult *queryResult);
+    // Write to a file a SELECT query result
+    static int fileWriteSelectQueryResult(const std::string &outputFileNameEnv, const PGresult *queryResult);
 
     static std::string readDatabaseIdentifier(const std::string &identifierType);
 
@@ -19,9 +21,11 @@ public:
 
     int SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNamePath) const;
 
-    int SELECT_ALL_SQL_QUERY(const std::string &tableName, const std::string &outputFileNamePath) const;
+    // SELECT * FROM *tableName*;
+    int SELECT_ALL_SQL_QUERY(const std::string &tableName, const std::string &outputFilePath) const;
 
-    int SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFileNamePath) const;
+    // SELECT *a*,*b*,*c* FROM *tableName*;
+    int SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFilePath) const;
 
     int INSERT_SQL_QUERY(const std::string &tableName) const;
 

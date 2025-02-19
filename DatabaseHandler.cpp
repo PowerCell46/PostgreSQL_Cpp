@@ -10,6 +10,7 @@
 #define TABLE_COL_SEPARATOR '|'
 #define END_OF_COL_SEPARATOR " |"
 #define COMMA_SPACE_SEPARATOR std::string(", ")
+#define ID_COL_NAME std::string("id")
 #define ESCAPE std::string("esc")
 #define TABLE std::string("Table")
 #define COLUMN std::string("Column")
@@ -87,7 +88,7 @@ int DatabaseHandler::SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNa
     return 0;
 }
 
-int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const std::string &outputFileNamePath) const {
+int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const std::string &outputFilePath) const {
     const std::string selectQuery =
             std::string("SELECT * FROM ") + tableName + std::string(";");
 
@@ -102,15 +103,14 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
         return 1;
     }
 
-    writeSelectQueryResult(outputFileNamePath, queryResult);
+    fileWriteSelectQueryResult(outputFilePath, queryResult);
 
     PQclear(queryResult);
 
     return 0;
 }
 
-int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName,
-                                              const std::string &outputFileNamePath) const {
+int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFilePath) const {
     // Make a query to get the column names
     std::string selectQuery =
             std::string("SELECT * FROM ") + tableName + std::string(" LIMIT 1;");
@@ -127,6 +127,7 @@ int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName,
     }
 
     std::vector<std::string> selectColumnNames;
+
     // Read column names, if they exist, add them to the vector
     while (true) {
         std::string currentSelectedColumn = readDatabaseIdentifier(COLUMN);
@@ -149,8 +150,8 @@ int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName,
     }
 
     selectQuery =
-            std::string("SELECT ") + join(selectColumnNames, COMMA_SPACE_SEPARATOR) + std::string(" FROM ") + tableName
-            + std::string(";");
+            std::string("SELECT ") + join(selectColumnNames, COMMA_SPACE_SEPARATOR) +
+            std::string(" FROM ") + tableName + std::string(";");
 
     queryResult = PQexec(connection, selectQuery.c_str());
 
@@ -161,7 +162,7 @@ int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName,
         return 1;
     }
 
-    writeSelectQueryResult(outputFileNamePath, queryResult);
+    fileWriteSelectQueryResult(outputFilePath, queryResult);
 
     PQclear(queryResult);
     return 0;
@@ -183,6 +184,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
     }
 
     const int tableColumnsNumber = PQnfields(queryResult); // Number of Columns of the Table
+
     std::vector<std::string> tableNames; // Vector with the table names
     tableNames.reserve(tableColumnsNumber);
     std::vector<std::string> insertValues; // Vector with the values
@@ -191,7 +193,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
     for (int i = 0; i < tableColumnsNumber; i++) {
         // Read the column value and keep it
         std::string currentColumnName{PQfname(queryResult, i)};
-        if (currentColumnName == "id") {
+        if (currentColumnName == ID_COL_NAME) {
             // Skip id (Most times it's Serial)
             continue;
         }
@@ -212,11 +214,11 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
             << " (" << join(tableNames, COMMA_SPACE_SEPARATOR)
             << ") VALUES (";
 
-    for (int i = 0; i < tableNames.size(); i++) {
+    const int actualTableColumnsNumber = static_cast<int>(tableNames.size()); // (Because of the id skip)
+    for (int i = 0; i < actualTableColumnsNumber; i++) {
         // Add placeholders for the dynamic data to the query
-
         insertQueryStream << '$' << i + 1;
-        if (i < tableNames.size() - 1)
+        if (i < actualTableColumnsNumber - 1)
             insertQueryStream << COMMA_SPACE_SEPARATOR;
     }
     insertQueryStream << ");";
@@ -226,7 +228,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
     const PGresult *insertResult = PQexecParams(
         connection,
         insertQueryStream.str().c_str(),
-        static_cast<int>(tableNames.size()),
+        actualTableColumnsNumber,
         nullptr,
         generateInsertParamValues(insertValues).data(),
         nullptr,
@@ -237,12 +239,14 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
     if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) {
         // Problem with the Insertion of data
         std::cerr << "INSERT failed: " << PQresultErrorMessage(insertResult) << std::endl;
-    } else {
-        std::cout << "INSERT operation was successful.\n";
+
+        PQclear(queryResult);
+        return 1;
     }
 
-    PQclear(queryResult);
+    std::cout << "INSERT operation was successful.\n";
 
+    PQclear(queryResult);
     return 0;
 }
 
@@ -422,7 +426,8 @@ int DatabaseHandler::EXECUTE_SQL_QUERY() const {
     PGresult *customQueryResult = nullptr;
     customQueryResult = PQexec(connection, customQuery.c_str());
 
-    if (PQresultStatus(customQueryResult) != PGRES_COMMAND_OK) { // SELECT has other error type
+    if (PQresultStatus(customQueryResult) != PGRES_COMMAND_OK) {
+        // SELECT has other error type
         std::cerr << "CUSTOM QUERY failed: " << PQerrorMessage(connection) << std::endl;
         PQclear(customQueryResult);
         return 1;
@@ -627,7 +632,7 @@ std::string DatabaseHandler::readTableName() {
     return readDatabaseIdentifier(TABLE);
 }
 
-int DatabaseHandler::writeSelectQueryResult(const std::string &outputFileNameEnv, const PGresult *queryResult) {
+int DatabaseHandler::fileWriteSelectQueryResult(const std::string &outputFileNameEnv, const PGresult *queryResult) {
     std::ofstream fileStream{outputFileNameEnv};
 
     auto *columnWidths = new std::string::size_type[PQnfields(queryResult)]{};
@@ -688,7 +693,7 @@ int DatabaseHandler::writeSelectQueryResult(const std::string &outputFileNameEnv
 bool DatabaseHandler::validateUserCredentials() const {
     constexpr auto VARCHAR_CODE_VALUE = 1043;
 
-    const char * paramValues[2]{
+    const char *paramValues[2]{
         readColumnValue(VARCHAR_CODE_VALUE, "Username", connection).c_str(),
         readColumnValue(VARCHAR_CODE_VALUE, "Password", connection).c_str()
     };

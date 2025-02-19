@@ -81,9 +81,9 @@ int main() {
 
     // database_handler.DROP_DATABASE_SQL_QUERY(databaseName);
 
-    database_handler.EXECUTE_SQL_QUERY();
+    // database_handler.EXECUTE_SQL_QUERY();
 
-    database_handler.SELECT_ALL_SQL_QUERY(tableName, selectOutputFileNameEnv);
+    // database_handler.SELECT_ALL_SQL_QUERY(tableName, selectOutputFileNameEnv);
 
     // database_handler.SELECT_COLUMNS_SQL_QUERY(tableName, selectOutputFileNameEnv);
 
