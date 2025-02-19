@@ -422,7 +422,7 @@ int DatabaseHandler::EXECUTE_SQL_QUERY() const {
     PGresult *customQueryResult = nullptr;
     customQueryResult = PQexec(connection, customQuery.c_str());
 
-    if (PQresultStatus(customQueryResult) != PGRES_COMMAND_OK) {
+    if (PQresultStatus(customQueryResult) != PGRES_COMMAND_OK) { // SELECT has other error type
         std::cerr << "CUSTOM QUERY failed: " << PQerrorMessage(connection) << std::endl;
         PQclear(customQueryResult);
         return 1;
@@ -711,10 +711,11 @@ bool DatabaseHandler::validateUserCredentials() const {
         std::cerr << "SELECT failed: " << PQerrorMessage(connection) << std::endl;
         return false;
     }
-    std::cout << "Success";
 
-    PQclear(selectAccountResult);
-    return false;
+    if (!PQntuples(selectAccountResult))
+        std::cout << "Access Denied. Not authorized.\n";
+
+    return PQntuples(selectAccountResult); // if there isn't such an entry -> length 0; else 1
 }
 
 std::string repeat(const char &ch, const std::string::size_type &times) {
