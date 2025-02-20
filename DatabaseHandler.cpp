@@ -1,5 +1,6 @@
 #include "iostream"
 #include "DatabaseHandler.h"
+#include "SHA256.h"
 #include "fstream"
 #include "sstream"
 #include "vector"
@@ -196,7 +197,8 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         std::string currentColumnName{PQfname(queryResult, i)};
 
         if (currentColumnName == ID_COL_NAME) {
-            std::string insertIdChoice = readColumnValue(VARCHAR_CODE_VALUE, "whether id should be included: (y/n)", connection);
+            std::string insertIdChoice = readColumnValue(
+                VARCHAR_CODE_VALUE, "whether id should be included: (y/n)", connection);
 
             if (insertIdChoice != "y" && insertIdChoice != "Y") {
                 std::cout << "Id column is being skipped.\n";
@@ -405,7 +407,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         return 0;
     }
 
-    const char *paramValues[1] {
+    const char *paramValues[1]{
         deleteValue.c_str()
     };
 
@@ -714,10 +716,10 @@ int DatabaseHandler::fileWriteSelectQueryResult(const std::string &outputFileNam
 }
 
 bool DatabaseHandler::validateUserCredentials() const {
-    const char *paramValues[2]{
-        readColumnValue(VARCHAR_CODE_VALUE, "Username", connection).c_str(),
-        readColumnValue(VARCHAR_CODE_VALUE, "Password", connection).c_str()
-    };
+    const std::string username = readColumnValue(VARCHAR_CODE_VALUE, "Username", connection);
+    const std::string passwordHash = SHA256::hash(readColumnValue(VARCHAR_CODE_VALUE, "Password", connection));
+
+    const char *paramValues[2]{username.c_str(), passwordHash.c_str()};
 
     const std::string selectAccountQuery =
             std::string("SELECT * FROM account WHERE username = $1 AND password = $2;");

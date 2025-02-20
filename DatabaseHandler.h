@@ -14,7 +14,7 @@ class DatabaseHandler {
 
     static std::string readDatabaseIdentifier(const std::string &identifierType);
 
-    bool validateUserCredentials() const; // TODO: add hashing to the password
+    bool validateUserCredentials() const;
 
 public:
     explicit DatabaseHandler(PGconn *connection);
@@ -28,7 +28,7 @@ public:
     // SELECT (*a*,*b*,*c*) FROM *tableName*;
     int SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFilePath) const;
 
-    // INSERT INTO *tableName* (*a*,*b*,*c*) VALUES(*a.a*,*b.b*,*c.c*);
+    // INSERT INTO *tableName* (*a*,*b*,*c*) VALUES (*a.a*,*b.b*,*c.c*);
     int INSERT_SQL_QUERY(const std::string &tableName) const;
 
     // UPDATE *tableName* SET *a* = ... WHERE *b* = ...;
