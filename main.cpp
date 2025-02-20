@@ -63,7 +63,7 @@ int main() {
     /******************************************************************************************************************/
     const std::string tableName = DatabaseHandler::readTableName();
 
-    database_handler.INSERT_SQL_QUERY(tableName);
+    // database_handler.INSERT_SQL_QUERY(tableName);
 
     // database_handler.UPDATE_SQL_QUERY(tableName);
 

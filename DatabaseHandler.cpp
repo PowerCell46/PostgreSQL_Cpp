@@ -198,8 +198,10 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         if (currentColumnName == ID_COL_NAME) {
             std::string insertIdChoice = readColumnValue(VARCHAR_CODE_VALUE, "whether id should be included: (y/n)", connection);
 
-            if (insertIdChoice != "y" && insertIdChoice != "Y")
+            if (insertIdChoice != "y" && insertIdChoice != "Y") {
+                std::cout << "Id column is being skipped.\n";
                 continue;
+            }
         }
 
         tableNames.push_back(currentColumnName); // Add the column name

@@ -14,11 +14,12 @@ class DatabaseHandler {
 
     static std::string readDatabaseIdentifier(const std::string &identifierType);
 
-    bool validateUserCredentials() const;
+    bool validateUserCredentials() const; // TODO: add hashing to the password
 
 public:
     explicit DatabaseHandler(PGconn *connection);
 
+    // SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';
     int SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNamePath) const;
 
     // SELECT * FROM *tableName*;
@@ -38,6 +39,7 @@ public:
 
     int EXECUTE_SQL_QUERY() const;
 
+    // CREATE TABLE *tableName* (*a..*,*b..*,*c..*); TODO: add validateCredentials()
     int CREATE_TABLE_SQL_QUERY(const std::string &tableName) const;
 
     // TRUNCATE TABLE *tableName* RESTART IDENTITY CASCADE;
