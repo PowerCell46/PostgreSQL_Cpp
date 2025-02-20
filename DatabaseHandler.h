@@ -24,23 +24,28 @@ public:
     // SELECT * FROM *tableName*;
     int SELECT_ALL_SQL_QUERY(const std::string &tableName, const std::string &outputFilePath) const;
 
-    // SELECT *a*,*b*,*c* FROM *tableName*;
+    // SELECT (*a*,*b*,*c*) FROM *tableName*;
     int SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFilePath) const;
 
     int INSERT_SQL_QUERY(const std::string &tableName) const;
 
+    // UPDATE *tableName* SET *a* = ... WHERE *b* = ...;
     int UPDATE_SQL_QUERY(const std::string &tableName) const;
 
+    // DELETE FROM *tableName* WHERE *a* = ...;
     int DELETE_SQL_QUERY(const std::string &tableName) const;
 
     int EXECUTE_SQL_QUERY() const;
 
     int CREATE_TABLE_SQL_QUERY(const std::string &tableName) const;
 
+    // TRUNCATE TABLE *tableName* RESTART IDENTITY CASCADE;
     int TRUNCATE_SQL_QUERY(const std::string &tableName) const;
 
+    // DROP TABLE IF EXISTS *tableName* CASCADE;
     int DROP_TABLE_SQL_QUERY(const std::string &tableName) const;
 
+    // DROP DATABASE IF EXISTS *tableName*;
     int DROP_DATABASE_SQL_QUERY(const std::string &databaseName) const;
 
     static std::string readTableName();

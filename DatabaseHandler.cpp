@@ -278,6 +278,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
             updateValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
             if (updateValue == EMPTY_VALUE) {
                 std::cout << "UPDATE failed: Cannot update one or more of the values.\n";
+
                 PQclear(queryResult);
                 return 1;
             }
@@ -287,6 +288,8 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 
     if (updateValue.empty()) {
         std::cout << NO_COLUMN_FOUND(updateColumn);
+
+        PQclear(queryResult);
         return 1;
     }
 
@@ -303,6 +306,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
             updateWhereValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
             if (updateWhereValue == EMPTY_VALUE) {
                 std::cout << "UPDATE failed: Cannot update one or more of the values.\n";
+
                 PQclear(queryResult);
                 return 1;
             }
@@ -312,6 +316,8 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 
     if (updateWhereValue.empty()) {
         std::cout << NO_COLUMN_FOUND(updateWhereColumn);
+
+        PQclear(queryResult);
         return 1;
     }
 
@@ -337,9 +343,12 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
 
     if (PQresultStatus(updateResult) != PGRES_COMMAND_OK) {
         std::cerr << "UPDATE failed: " << PQerrorMessage(connection) << std::endl;
-    } else {
-        std::cout << "UPDATE operation was successful.\n";
+
+        PQclear(updateResult);
+        return 1;
     }
+
+    std::cout << "UPDATE operation was successful.\n";
 
     PQclear(updateResult);
     return 0;
@@ -375,6 +384,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
             deleteValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
             if (deleteValue == EMPTY_VALUE) {
                 std::cout << "DELETE failed: Cannot delete one or more of the values.\n";
+
                 PQclear(queryResult);
                 return 1;
             }
@@ -384,10 +394,14 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
 
     if (deleteValue.empty()) {
         std::cout << NO_COLUMN_FOUND(deleteByColumn);
+
+        PQclear(queryResult);
         return 0;
     }
 
-    const char *paramValues[1]{deleteValue.c_str()};
+    const char *paramValues[1] {
+        deleteValue.c_str()
+    };
 
     const std::string deleteQuery =
             std::string("DELETE FROM ") + tableName +
@@ -407,9 +421,12 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
 
     if (PQresultStatus(deleteResult) != PGRES_COMMAND_OK) {
         std::cerr << "DELETE failed: " << PQerrorMessage(connection) << std::endl;
-    } else {
-        std::cout << "DELETE operation was successful.\n";
+
+        PQclear(deleteResult);
+        return 1;
     }
+
+    std::cout << "DELETE operation was successful.\n";
 
     PQclear(deleteResult);
     return 0;
@@ -480,7 +497,7 @@ int DatabaseHandler::TRUNCATE_SQL_QUERY(const std::string &tableName) const {
     PGresult *truncateResult = PQexec(connection, truncateQuery.c_str());
 
     if (PQresultStatus(truncateResult) != PGRES_COMMAND_OK) {
-        std::cerr << "TRUNCATE failed: " << PQerrorMessage(connection) << std::endl;
+        std::cerr << "TRUNCATE failed: " << PQerrorMessage(connection) << '\n';
         return 1;
     }
 
@@ -498,7 +515,7 @@ int DatabaseHandler::DROP_TABLE_SQL_QUERY(const std::string &tableName) const {
     PGresult *dropTableResult = PQexec(connection, dropTableQuery.c_str());
 
     if (PQresultStatus(dropTableResult) != PGRES_COMMAND_OK) {
-        std::cerr << "DROP TABLE failed: " << PQerrorMessage(connection) << std::endl;
+        std::cerr << "DROP TABLE failed: " << PQerrorMessage(connection) << '\n';
         return 1;
     }
     std::cout << "DROP TABLE operation was successful.\n";
@@ -515,7 +532,7 @@ int DatabaseHandler::DROP_DATABASE_SQL_QUERY(const std::string &databaseName) co
     PGresult *dropDatabaseResult = PQexec(connection, dropDatabaseQuery.c_str());
 
     if (PQresultStatus(dropDatabaseResult) != PGRES_COMMAND_OK) {
-        std::cerr << "DROP DATABASE failed: " << PQerrorMessage(connection) << std::endl;
+        std::cerr << "DROP DATABASE failed: " << PQerrorMessage(connection) << '\n';
         return 1;
     }
 
@@ -611,20 +628,20 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::str
 }
 
 std::string DatabaseHandler::readDatabaseIdentifier(const std::string &identifierType) {
-    std::string tableName;
+    std::string identifierName;
     while (true) {
         std::cout << "Enter " << identifierType << " name:";
-        std::getline(std::cin, tableName);
+        std::getline(std::cin, identifierName);
 
-        if (tableName.empty()) {
-            std::cout << "Invalid table name.\n";
+        if (identifierName.empty()) {
+            std::cout << "Invalid " << identifierType << " name.\n";
             continue;
         }
 
-        if (stringValueDoesNotContainInvalidChars(tableName))
-            return tableName;
+        if (stringValueDoesNotContainInvalidChars(identifierName))
+            return identifierName;
 
-        std::cout << "Invalid table name.\n";
+        std::cout << "Invalid " << identifierType << " name.\n";
     }
 }
 
@@ -698,10 +715,10 @@ bool DatabaseHandler::validateUserCredentials() const {
         readColumnValue(VARCHAR_CODE_VALUE, "Password", connection).c_str()
     };
 
-    std::string selectAccountQuery =
+    const std::string selectAccountQuery =
             std::string("SELECT * FROM account WHERE username = $1 AND password = $2;");
 
-    PGresult *selectAccountResult = PQexecParams(
+    const PGresult *selectAccountResult = PQexecParams(
         connection,
         selectAccountQuery.c_str(),
         2, // Number of parameters
@@ -725,7 +742,6 @@ bool DatabaseHandler::validateUserCredentials() const {
 
 std::string repeat(const char &ch, const std::string::size_type &times) {
     std::stringstream strStream{};
-
     for (int i = 0; i < times; ++i)
         strStream << ch;
 
@@ -786,20 +802,24 @@ bool isSqlDateFormatValid(const std::string &dateStr) {
     if (dateStr.length() != 10)
         return false;
 
+    constexpr char DASH_CHAR = '-';
+    constexpr char ZERO_CHAR = '0';
+    constexpr char NINE_CHAR = '9';
     return
-            dateStr[4] == '-' && dateStr[7] == '-'
-            && dateStr[0] >= '0' && dateStr[0] <= '9'
-            && dateStr[1] >= '0' && dateStr[1] <= '9'
-            && dateStr[2] >= '0' && dateStr[2] <= '9'
-            && dateStr[3] >= '0' && dateStr[3] <= '9'
-            && dateStr[5] >= '0' && dateStr[5] <= '9'
-            && dateStr[6] >= '0' && dateStr[6] <= '9'
-            && dateStr[8] >= '0' && dateStr[8] <= '9'
-            && dateStr[9] >= '0' && dateStr[9] <= '9';
+            dateStr[4] == DASH_CHAR && dateStr[7] == DASH_CHAR
+            && dateStr[0] >= ZERO_CHAR && dateStr[0] <= NINE_CHAR
+            && dateStr[1] >= ZERO_CHAR && dateStr[1] <= NINE_CHAR
+            && dateStr[2] >= ZERO_CHAR && dateStr[2] <= NINE_CHAR
+            && dateStr[3] >= ZERO_CHAR && dateStr[3] <= NINE_CHAR
+            && dateStr[5] >= ZERO_CHAR && dateStr[5] <= NINE_CHAR
+            && dateStr[6] >= ZERO_CHAR && dateStr[6] <= NINE_CHAR
+            && dateStr[8] >= ZERO_CHAR && dateStr[8] <= NINE_CHAR
+            && dateStr[9] >= ZERO_CHAR && dateStr[9] <= NINE_CHAR;
 }
 
 
 bool stringValueDoesNotContainInvalidChars(const std::string &strValue) {
+    constexpr std::string VALID_CHARS_STR = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
     return strValue
-           .find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == std::string::npos;
+           .find_first_not_of(VALID_CHARS_STR) == std::string::npos;
 }
