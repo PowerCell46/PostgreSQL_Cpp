@@ -27,6 +27,7 @@ public:
     // SELECT (*a*,*b*,*c*) FROM *tableName*;
     int SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, const std::string &outputFilePath) const;
 
+    // INSERT INTO *tableName* (*a*,*b*,*c*) VALUES(*a.a*,*b.b*,*c.c*);
     int INSERT_SQL_QUERY(const std::string &tableName) const;
 
     // UPDATE *tableName* SET *a* = ... WHERE *b* = ...;

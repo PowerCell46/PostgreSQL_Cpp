@@ -16,6 +16,7 @@
 #define COLUMN std::string("Column")
 #define EMPTY_VALUE std::string("N/A")
 #define SELECT_TABLE_NAMES_COL_TITLE std::string("Table Name")
+#define VARCHAR_CODE_VALUE 1043
 #define NO_COLUMN_FOUND(colName) (std::string("No column found with name ") + (colName) + std::string(".\n"))
 
 
@@ -193,9 +194,12 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
     for (int i = 0; i < tableColumnsNumber; i++) {
         // Read the column value and keep it
         std::string currentColumnName{PQfname(queryResult, i)};
+
         if (currentColumnName == ID_COL_NAME) {
-            // Skip id (Most times it's Serial)
-            continue;
+            std::string insertIdChoice = readColumnValue(VARCHAR_CODE_VALUE, "whether id should be included: (y/n)", connection);
+
+            if (insertIdChoice != "y" && insertIdChoice != "Y")
+                continue;
         }
 
         tableNames.push_back(currentColumnName); // Add the column name
@@ -708,8 +712,6 @@ int DatabaseHandler::fileWriteSelectQueryResult(const std::string &outputFileNam
 }
 
 bool DatabaseHandler::validateUserCredentials() const {
-    constexpr auto VARCHAR_CODE_VALUE = 1043;
-
     const char *paramValues[2]{
         readColumnValue(VARCHAR_CODE_VALUE, "Username", connection).c_str(),
         readColumnValue(VARCHAR_CODE_VALUE, "Password", connection).c_str()
@@ -819,7 +821,7 @@ bool isSqlDateFormatValid(const std::string &dateStr) {
 
 
 bool stringValueDoesNotContainInvalidChars(const std::string &strValue) {
-    constexpr std::string VALID_CHARS_STR = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+    const std::string VALID_CHARS_STR = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
     return strValue
            .find_first_not_of(VALID_CHARS_STR) == std::string::npos;
 }
