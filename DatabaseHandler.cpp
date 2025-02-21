@@ -364,8 +364,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, selectQuery.c_str());
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) /* Not successful SQL query */ {
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
         return 1;
@@ -379,11 +378,11 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
     for (int i = 0; i < PQnfields(queryResult); i++) {
         const std::string currentColumnName{PQfname(queryResult, i)};
 
-        if (currentColumnName == deleteByColumn) {
-            // Read different type of data type
+        if (currentColumnName == deleteByColumn) /* Read different type of data type */ {
             std::cout << "Enter " << currentColumnName << " value:";
 
             deleteValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
+
             if (deleteValue == EMPTY_VALUE) {
                 std::cout << "DELETE failed: Cannot delete one or more of the values.\n";
 
@@ -401,9 +400,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         return 0;
     }
 
-    const char *paramValues[1]{
-        deleteValue.c_str()
-    };
+    const std::vector deleteValues{deleteValue};
 
     const std::string deleteQuery =
             std::string("DELETE FROM ") + tableName +
@@ -415,7 +412,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         deleteQuery.c_str(),
         1, // Number of parameters
         nullptr, // Parameter types (NULL = infer from query)
-        paramValues, // Parameter values
+        generateInsertParamValues(deleteValues).data(), // Parameter values
         nullptr, // Parameter lengths (NULL = assume text)
         nullptr, // Parameter formats (NULL = assume text)
         0 // Result format: 0 for text, 1 for binary
@@ -435,18 +432,17 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
 }
 
 int DatabaseHandler::EXECUTE_SQL_QUERY() const {
-    if (!validateUserCredentials())
-        return 1;
+    // TODO: Add permissions -> only auth users can create tables
+    // if (!validateUserCredentials())
+    //     return 1;
 
     std::string customQuery;
     std::cout << "Enter SQL query to be executed:";
     std::getline(std::cin, customQuery);
 
-    PGresult *customQueryResult = nullptr;
-    customQueryResult = PQexec(connection, customQuery.c_str());
+    PGresult *customQueryResult = PQexec(connection, customQuery.c_str());
 
-    if (PQresultStatus(customQueryResult) != PGRES_COMMAND_OK) {
-        // SELECT has other error type
+    if (PQresultStatus(customQueryResult) != PGRES_COMMAND_OK) /* CUSTOM QUERY has other error type */ {
         std::cerr << "CUSTOM QUERY failed: " << PQerrorMessage(connection) << std::endl;
         PQclear(customQueryResult);
         return 1;
@@ -460,6 +456,9 @@ int DatabaseHandler::EXECUTE_SQL_QUERY() const {
 
 int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const {
     // TODO: Add permissions -> only auth users can create tables
+    // if (!validateUserCredentials())
+    //     return 1;
+
     std::vector<std::string> columnDefinitions;
 
     while (true) {
@@ -528,8 +527,8 @@ int DatabaseHandler::DROP_TABLE_SQL_QUERY(const std::string &tableName) const {
 
 int DatabaseHandler::DROP_DATABASE_SQL_QUERY(const std::string &databaseName) const {
     const std::string dropDatabaseQuery =
-            std::string("DROP DATABASE IF EXISTS ") + databaseName +
-            std::string(";");
+            std::string("DROP DATABASE IF EXISTS ") +
+            databaseName + std::string(";");
 
     PGresult *dropDatabaseResult = PQexec(connection, dropDatabaseQuery.c_str());
 
@@ -547,9 +546,9 @@ int DatabaseHandler::DROP_DATABASE_SQL_QUERY(const std::string &databaseName) co
 
 std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::string &columnName, PGconn *connection) {
     switch (dataType) {
-        case 1043: {
-            // VARCHAR
+        case 1043: /* VARCHAR */ {
             std::string currentValue;
+
             while (true) {
                 std::cout << "Enter " << columnName << ": ";
 
@@ -572,8 +571,7 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::str
                 std::cout << "Invalid VARCHAR value entered.\n";
             }
         }
-        case 23: {
-            // INT4
+        case 23: /* INT4 */ {
             int currentValue;
 
             while (true) {
@@ -591,9 +589,9 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::str
 
             return std::to_string(currentValue);
         }
-        case 1700: {
-            // DECIMAL, NUMERIC
+        case 1700: /* DECIMAL, NUMERIC */ {
             double currentValue;
+
             while (true) {
                 std::cout << "Enter " << columnName << ":";
                 std::cin >> currentValue;
@@ -609,9 +607,9 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::str
 
             return std::to_string(currentValue);
         }
-        case 1082: {
-            // DATE
+        case 1082: /* DATE */ {
             std::string currentValue;
+
             while (true) {
                 std::cout << "Enter " << columnName << ":";
                 std::cin >> currentValue;
@@ -630,7 +628,8 @@ std::string DatabaseHandler::readColumnValue(const Oid &dataType, const std::str
 }
 
 std::string DatabaseHandler::readDatabaseIdentifier(const std::string &identifierType) {
-    std::string identifierName;
+    std::string identifierName; // (TABLE, COLUMN)
+
     while (true) {
         std::cout << "Enter " << identifierType << " name:";
         std::getline(std::cin, identifierName);
@@ -713,7 +712,7 @@ bool DatabaseHandler::validateUserCredentials() const {
     const std::string username = readColumnValue(VARCHAR_CODE_VALUE, "Username", connection);
     const std::string passwordHash = SHA256::hash(readColumnValue(VARCHAR_CODE_VALUE, "Password", connection));
 
-    const char *paramValues[2]{username.c_str(), passwordHash.c_str()};
+    const std::vector validateCredentialsValues{username, passwordHash};
 
     const std::string selectAccountQuery =
             std::string("SELECT * FROM account WHERE username = $1 AND password = $2;");
@@ -723,7 +722,7 @@ bool DatabaseHandler::validateUserCredentials() const {
         selectAccountQuery.c_str(),
         2, // Number of parameters
         nullptr, // Parameter types (NULL = infer from query)
-        paramValues, // Parameter values
+        generateInsertParamValues(validateCredentialsValues).data(), // Parameter values
         nullptr, // Parameter lengths (NULL = assume text)
         nullptr, // Parameter formats (NULL = assume text)
         0 // Result format: 0 for text, 1 for binary
@@ -806,6 +805,7 @@ bool isSqlDateFormatValid(const std::string &dateStr) {
     constexpr char DASH_CHAR = '-';
     constexpr char ZERO_CHAR = '0';
     constexpr char NINE_CHAR = '9';
+
     return
             dateStr[4] == DASH_CHAR && dateStr[7] == DASH_CHAR
             && dateStr[0] >= ZERO_CHAR && dateStr[0] <= NINE_CHAR
