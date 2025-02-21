@@ -21,18 +21,24 @@
 #define NO_COLUMN_FOUND(colName) (std::string("No column found with name ") + (colName) + std::string(".\n"))
 
 
-std::string repeat(const char &, const std::string::size_type &);
+// Repeat character *n* number of times
+std::string repeat(const char &ch, const std::string::size_type &times);
 
-std::string addRightPadding(const std::string &, const std::string::size_type &);
+// Adding spaces till the str reaches the size
+std::string addRightPadding(const std::string &valueStr, const std::string::size_type &size);
 
-std::string createBetweenRowsRow(const std::string::size_type *, const int &);
+// Create a whole in between entries row for printing the table
+std::string createBetweenRowsRow(const std::string::size_type *columnWidths, const int &colWidthsSize);
 
-std::string join(const std::vector<std::string> &, const std::string &);
+// Join vector by a separator
+std::string join(const std::vector<std::string> &elements, const std::string &separator);
 
 std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &);
 
-bool isSqlDateFormatValid(const std::string &);
+// Validate Date str
+bool isSqlDateFormatValid(const std::string &dateStr);
 
+// Check whether a str contains invalid characters
 bool stringValueDoesNotContainInvalidChars(const std::string &);
 
 
@@ -748,6 +754,7 @@ bool DatabaseHandler::validateUserCredentials() const {
 
 std::string repeat(const char &ch, const std::string::size_type &times) {
     std::stringstream strStream{};
+
     for (int i = 0; i < times; ++i)
         strStream << ch;
 
@@ -756,7 +763,7 @@ std::string repeat(const char &ch, const std::string::size_type &times) {
 
 
 std::string addRightPadding(const std::string &valueStr, const std::string::size_type &size) {
-    if (valueStr.length() == size)
+    if (valueStr.length() <= size)
         return valueStr;
 
     std::stringstream resultStream{};
