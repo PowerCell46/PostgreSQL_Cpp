@@ -6,6 +6,7 @@
 #include "vector"
 #include "limits"
 
+
 #define BETWEEN_ROWS_SEPARATOR '.'
 #define TABLE_ROW_SEPARATOR '-'
 #define TABLE_COL_SEPARATOR '|'
@@ -54,25 +55,24 @@ int DatabaseHandler::SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNa
 
     PGresult *queryResult = PQexec(connection, selectTableNamesQuery.c_str());
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) /* Not successful SQL query */ {
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
         return 1;
     }
 
     auto biggestCharWidth = SELECT_TABLE_NAMES_COL_TITLE.length() + 1;
+
     // Find the longest str in order to calculate the width of the column
     for (int i = 0; i < PQntuples(queryResult); ++i) {
-        std::string tableName(PQgetvalue(queryResult, i, 0));
-        if (tableName.length() > biggestCharWidth)
+        if (const std::string tableName(PQgetvalue(queryResult, i, 0)); tableName.length() > biggestCharWidth)
             biggestCharWidth = tableName.length();
     }
 
     // Table Head
     fileStream << repeat(TABLE_ROW_SEPARATOR, biggestCharWidth + 2) << '\n';
 
-    // Table Column Name
+    // Table Column Names
     fileStream
             << TABLE_COL_SEPARATOR << addRightPadding(SELECT_TABLE_NAMES_COL_TITLE, biggestCharWidth)
             << TABLE_COL_SEPARATOR << '\n'
@@ -84,15 +84,14 @@ int DatabaseHandler::SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNa
         std::string tableName(PQgetvalue(queryResult, i, 0));
         fileStream
                 << TABLE_COL_SEPARATOR << addRightPadding(tableName, biggestCharWidth) << TABLE_COL_SEPARATOR << '\n'
-                << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, biggestCharWidth) << TABLE_COL_SEPARATOR <<
-                '\n';
+                << TABLE_COL_SEPARATOR << repeat(BETWEEN_ROWS_SEPARATOR, biggestCharWidth) << TABLE_COL_SEPARATOR
+                << '\n';
     }
 
     // Table Tail
     fileStream << repeat(TABLE_ROW_SEPARATOR, biggestCharWidth + 2) << '\n';
 
     PQclear(queryResult);
-
     return 0;
 }
 
@@ -100,12 +99,9 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
     const std::string selectQuery =
             std::string("SELECT * FROM ") + tableName + std::string(";");
 
-    PGresult *queryResult = nullptr;
+    PGresult *queryResult = PQexec(connection, selectQuery.c_str());
 
-    queryResult = PQexec(connection, selectQuery.c_str());
-
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) /* Not successful SQL query */ {
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
         return 1;
@@ -114,7 +110,6 @@ int DatabaseHandler::SELECT_ALL_SQL_QUERY(const std::string &tableName, const st
     fileWriteSelectQueryResult(outputFilePath, queryResult);
 
     PQclear(queryResult);
-
     return 0;
 }
 
@@ -127,8 +122,7 @@ int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, cons
 
     queryResult = PQexec(connection, selectQuery.c_str());
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) /* Not successful SQL query */ {
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
         return 1;
@@ -136,18 +130,17 @@ int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, cons
 
     std::vector<std::string> selectColumnNames;
 
-    // Read column names, if they exist, add them to the vector
+    // Read the user's entered column names, if they exist, add them to the vector
     while (true) {
         std::string currentSelectedColumn = readDatabaseIdentifier(COLUMN);
+
         if (currentSelectedColumn == ESCAPE)
             break;
 
         bool found = false;
 
         for (int i = 0; i < PQnfields(queryResult); i++) {
-            std::string columnName{PQfname(queryResult, i)};
-
-            if (columnName == currentSelectedColumn) {
+            if (std::string columnName{PQfname(queryResult, i)}; columnName == currentSelectedColumn) {
                 selectColumnNames.push_back(currentSelectedColumn);
                 found = true;
                 break;
@@ -163,8 +156,7 @@ int DatabaseHandler::SELECT_COLUMNS_SQL_QUERY(const std::string &tableName, cons
 
     queryResult = PQexec(connection, selectQuery.c_str());
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) /* Not successful SQL query */ {
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
         return 1;
