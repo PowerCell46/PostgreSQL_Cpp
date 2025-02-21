@@ -34,7 +34,8 @@ std::string createBetweenRowsRow(const std::string::size_type *columnWidths, con
 // Join vector by a separator
 std::string join(const std::vector<std::string> &elements, const std::string &separator);
 
-std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &);
+// Convert vector of std::strings to vector of characters
+std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &insertValues);
 
 // Validate Date str
 bool isSqlDateFormatValid(const std::string &dateStr);
@@ -176,8 +177,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, selectQuery.c_str());
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) /* Not successful SQL query */ {
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
         return 1;
@@ -187,6 +187,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
 
     std::vector<std::string> tableNames; // Vector with the table names
     tableNames.reserve(tableColumnsNumber);
+
     std::vector<std::string> insertValues; // Vector with the values
     insertValues.reserve(tableColumnsNumber);
 
@@ -203,14 +204,16 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
                 continue;
             }
         }
-
         tableNames.push_back(currentColumnName); // Add the column name
+
         std::string currentInsertValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
+
         if (currentInsertValue == EMPTY_VALUE) {
             std::cout << "INSERT failed: Cannot insert one or more of the values.\n";
             PQclear(queryResult);
             return 1;
         }
+
         // Add the read data
         insertValues.push_back(currentInsertValue);
     }
@@ -221,15 +224,13 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
             << ") VALUES (";
 
     const int actualTableColumnsNumber = static_cast<int>(tableNames.size()); // (Because of the id skip)
-    for (int i = 0; i < actualTableColumnsNumber; i++) {
-        // Add placeholders for the dynamic data to the query
+
+    for (int i = 0; i < actualTableColumnsNumber; i++) /* Add placeholders for the dynamic data to the query */ {
         insertQueryStream << '$' << i + 1;
         if (i < actualTableColumnsNumber - 1)
             insertQueryStream << COMMA_SPACE_SEPARATOR;
     }
     insertQueryStream << ");";
-
-    std::cout << insertQueryStream.str();
 
     const PGresult *insertResult = PQexecParams(
         connection,
@@ -242,8 +243,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         0
     );
 
-    if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) {
-        // Problem with the Insertion of data
+    if (PQresultStatus(insertResult) != PGRES_COMMAND_OK) /* Problem with the Insertion of data */ {
         std::cerr << "INSERT failed: " << PQresultErrorMessage(insertResult) << std::endl;
 
         PQclear(queryResult);
@@ -264,8 +264,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
     PGresult *queryResult = nullptr;
     queryResult = PQexec(connection, selectQuery.c_str());
 
-    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) {
-        // Not successful SQL query
+    if (PQresultStatus(queryResult) != PGRES_TUPLES_OK) /* Not successful SQL query */ {
         fprintf(stderr, "%s[%d]: Select failed: %s\n",
                 __FILE__, __LINE__, PQresultErrorMessage(queryResult));
         return 1;
@@ -279,9 +278,9 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
     for (int i = 0; i < PQnfields(queryResult); i++) {
         const std::string currentColumnName{PQfname(queryResult, i)};
 
-        if (currentColumnName == updateColumn) {
-            // Read different type of data type
+        if (currentColumnName == updateColumn) /* Read different type of data type */ {
             updateValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
+
             if (updateValue == EMPTY_VALUE) {
                 std::cout << "UPDATE failed: Cannot update one or more of the values.\n";
 
@@ -307,9 +306,9 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
     for (int i = 0; i < PQnfields(queryResult); i++) {
         const std::string currentColumnName{PQfname(queryResult, i)};
 
-        if (currentColumnName == updateWhereColumn) {
-            // Read different type of data type
+        if (currentColumnName == updateWhereColumn) /* Read different type of data type */ {
             updateWhereValue = readColumnValue(PQftype(queryResult, i), currentColumnName, connection);
+
             if (updateWhereValue == EMPTY_VALUE) {
                 std::cout << "UPDATE failed: Cannot update one or more of the values.\n";
 
@@ -327,10 +326,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         return 1;
     }
 
-    const char *paramValues[2]{
-        updateValue.c_str(),
-        updateWhereValue.c_str()
-    };
+    const std::vector updateValues{updateValue, updateWhereValue};
 
     const std::string updateQuery =
             std::string("UPDATE ") + tableName + std::string(" SET ") + updateColumn +
@@ -341,7 +337,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         updateQuery.c_str(),
         2, // Number of parameters
         nullptr, // Parameter types (NULL = infer from query)
-        paramValues, // Parameter values
+        generateInsertParamValues(updateValues).data(), // Parameter values
         nullptr, // Parameter lengths (NULL = assume text)
         nullptr, // Parameter formats (NULL = assume text)
         0 // Result format: 0 for text, 1 for binary
