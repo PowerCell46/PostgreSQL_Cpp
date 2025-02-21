@@ -39,7 +39,7 @@ public:
 
     int EXECUTE_SQL_QUERY() const;
 
-    // CREATE TABLE *tableName* (*a..*,*b..*,*c..*); TODO: add validateCredentials()
+    // CREATE TABLE *tableName* (*a..*,*b..*,*c..*);
     int CREATE_TABLE_SQL_QUERY(const std::string &tableName) const;
 
     // TRUNCATE TABLE *tableName* RESTART IDENTITY CASCADE;

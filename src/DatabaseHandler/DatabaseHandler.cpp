@@ -20,6 +20,7 @@
 #define SELECT_TABLE_NAMES_COL_TITLE std::string("Table Name")
 #define VARCHAR_CODE_VALUE 1043
 #define NO_COLUMN_FOUND(colName) (std::string("No column found with name ") + (colName) + std::string(".\n"))
+#define OPERATION_WAS_SUCCESSFUL(operation) ((operation) + std::string(" operation was successful.\n"))
 
 
 // Repeat character *n* number of times
@@ -34,7 +35,7 @@ std::string createBetweenRowsRow(const std::string::size_type *columnWidths, con
 // Join vector by a separator
 std::string join(const std::vector<std::string> &elements, const std::string &separator);
 
-// Convert vector of std::strings to vector of characters
+// Convert vector of std::strings to vector of characters TODO: change this
 std::vector<const char *> generateInsertParamValues(const std::vector<std::string> &insertValues);
 
 // Validate Date str
@@ -91,6 +92,8 @@ int DatabaseHandler::SELECT_ALL_TABLES_SQL_QUERY(const std::string &outputFileNa
 
     // Table Tail
     fileStream << repeat(TABLE_ROW_SEPARATOR, biggestCharWidth + 2) << '\n';
+
+    std::cout << OPERATION_WAS_SUCCESSFUL("SELECT ALL TABLES");
 
     PQclear(queryResult);
     return 0;
@@ -250,7 +253,7 @@ int DatabaseHandler::INSERT_SQL_QUERY(const std::string &tableName) const {
         return 1;
     }
 
-    std::cout << "INSERT operation was successful.\n";
+    std::cout << OPERATION_WAS_SUCCESSFUL("INSERT");
 
     PQclear(queryResult);
     return 0;
@@ -350,7 +353,7 @@ int DatabaseHandler::UPDATE_SQL_QUERY(const std::string &tableName) const {
         return 1;
     }
 
-    std::cout << "UPDATE operation was successful.\n";
+    std::cout << OPERATION_WAS_SUCCESSFUL("UPDATE");
 
     PQclear(updateResult);
     return 0;
@@ -425,7 +428,7 @@ int DatabaseHandler::DELETE_SQL_QUERY(const std::string &tableName) const {
         return 1;
     }
 
-    std::cout << "DELETE operation was successful.\n";
+    std::cout << OPERATION_WAS_SUCCESSFUL("DELETE");
 
     PQclear(deleteResult);
     return 0;
@@ -448,7 +451,7 @@ int DatabaseHandler::EXECUTE_SQL_QUERY() const {
         return 1;
     }
 
-    std::cout << "CUSTOM QUERY operation was successful.\n";
+    std::cout << OPERATION_WAS_SUCCESSFUL("CUSTOM QUERY");
 
     PQclear(customQueryResult);
     return 0;
@@ -484,7 +487,7 @@ int DatabaseHandler::CREATE_TABLE_SQL_QUERY(const std::string &tableName) const 
         return 1;
     }
 
-    std::cout << "CREATE TABLE operation was successful.\n";
+    std::cout << OPERATION_WAS_SUCCESSFUL("CREATE TABLE");
 
     PQclear(createTableResult);
     return 0;
@@ -502,7 +505,7 @@ int DatabaseHandler::TRUNCATE_SQL_QUERY(const std::string &tableName) const {
         return 1;
     }
 
-    std::cout << "TRUNCATE operation was successful.\n";
+    std::cout << OPERATION_WAS_SUCCESSFUL("TRUNCATE");
 
     PQclear(truncateResult);
     return 0;
@@ -519,7 +522,7 @@ int DatabaseHandler::DROP_TABLE_SQL_QUERY(const std::string &tableName) const {
         std::cerr << "DROP TABLE failed: " << PQerrorMessage(connection) << '\n';
         return 1;
     }
-    std::cout << "DROP TABLE operation was successful.\n";
+    std::cout << OPERATION_WAS_SUCCESSFUL("DROP TABLE");
 
     PQclear(dropTableResult);
     return 0;
@@ -537,7 +540,7 @@ int DatabaseHandler::DROP_DATABASE_SQL_QUERY(const std::string &databaseName) co
         return 1;
     }
 
-    std::cout << "DROP DATABASE operation was successful.\n";
+    std::cout << OPERATION_WAS_SUCCESSFUL("DROP DATABASE");
 
     PQclear(dropDatabaseResult);
     return 0;
@@ -700,7 +703,8 @@ int DatabaseHandler::fileWriteSelectQueryResult(const std::string &outputFileNam
 
     // Print the table tail
     fileStream << repeat(TABLE_ROW_SEPARATOR, totalSymbolsSize) << '\n';
-    std::cout << "SELECT operation was successful.\n";
+
+    std::cout << OPERATION_WAS_SUCCESSFUL("SELECT");
 
     delete columnWidths;
 
