@@ -1,7 +1,7 @@
 #include <iostream>
 #include <libpq-fe.h>
-#include "DbConnection.h"
-#include "DatabaseHandler.h"
+#include "src/DatabaseHandler/DatabaseHandler.h"
+#include "src/DbConnection/DbConnection.h"
 
 
 int main() {
@@ -17,7 +17,7 @@ int main() {
     // SQL operations
     /*************************************************************/
 
-    // const std::string tableName = DatabaseHandler::readTableName();
+    const std::string tableName = DatabaseHandler::readTableName();
 
     // database_handler.INSERT_SQL_QUERY(tableName);
 
@@ -39,7 +39,7 @@ int main() {
 
     // database_handler.EXECUTE_SQL_QUERY();
 
-    // database_handler.SELECT_ALL_SQL_QUERY(tableName, selectQueryFileNameEnv);
+    database_handler.SELECT_ALL_SQL_QUERY(tableName, selectQueryFileNameEnv);
 
     // database_handler.SELECT_COLUMNS_SQL_QUERY(tableName, selectQueryFileNameEnv);
 

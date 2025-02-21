@@ -1,6 +1,6 @@
 #include "iostream"
 #include "DatabaseHandler.h"
-#include "SHA256.h"
+#include "../SHA256/SHA256.h"
 #include "fstream"
 #include "sstream"
 #include "vector"
@@ -750,7 +750,7 @@ std::string repeat(const char &ch, const std::string::size_type &times) {
 
 
 std::string addRightPadding(const std::string &valueStr, const std::string::size_type &size) {
-    if (valueStr.length() <= size)
+    if (valueStr.length() == size)
         return valueStr;
 
     std::stringstream resultStream{};

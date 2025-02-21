@@ -38,12 +38,12 @@ message("-- PostgreSQL_LIBRARIES: ${PostgreSQL_LIBRARIES}")
 
 # Create an executable
 add_executable(ExamplePostgreSQL main.cpp
-        DatabaseHandler.cpp
-        DatabaseHandler.h
-        SHA256.cpp
-        SHA256.h
-        DbConnection.cpp
-        DbConnection.h)
+        src/DatabaseHandler/DatabaseHandler.cpp
+        src/DatabaseHandler/DatabaseHandler.h
+        src/SHA256/SHA256.cpp
+        src/SHA256/SHA256.h
+        src/DbConnection/DbConnection.cpp
+        src/DbConnection/DbConnection.h)
 
 # Link the executable `ExamplePostgreSQL` with the PostgreSQL library
 target_link_libraries(ExamplePostgreSQL ${PostgreSQL_LIBRARIES})
