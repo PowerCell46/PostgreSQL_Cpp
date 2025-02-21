@@ -8,6 +8,8 @@
 
 #define POSTGRE_SQL_ADMIN_ENV_NAME "POSTGRE_SQL_ADMIN"
 #define POSTGRE_SQL_ADMIN_ENV_PASS "POSTGRE_SQL_PASS"
+#define TABLES_OUTPUT_FILE "TABLES_OUTPUT_FILE"
+#define SELECT_OUTPUT_FILE_ENV "SELECT_OUTPUT_FILE"
 
 
 PGconn *DbConnection::getConnection() {
@@ -40,4 +42,26 @@ PGconn *DbConnection::getConnection() {
     }
 
     return connection;
+}
+
+const char *DbConnection::getSelectTablesFilePath() {
+    const char *tablesOutputFileEnv = std::getenv(TABLES_OUTPUT_FILE);
+
+    if (tablesOutputFileEnv == nullptr) {
+        std::cerr << "Error: Environment variable " << TABLES_OUTPUT_FILE << " is not set.\n";
+        return nullptr;
+    }
+
+    return tablesOutputFileEnv;
+}
+
+const char *DbConnection::getSelectQueryFilePath() {
+    const char *selectOutputFileNameEnv = std::getenv(SELECT_OUTPUT_FILE_ENV);
+
+    if (selectOutputFileNameEnv == nullptr) {
+        std::cerr << "Error: Environment variable " << SELECT_OUTPUT_FILE_ENV << " is not set.\n";
+        return nullptr;
+    }
+
+    return selectOutputFileNameEnv;
 }
