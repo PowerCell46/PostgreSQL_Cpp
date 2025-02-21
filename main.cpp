@@ -7,7 +7,9 @@
 int main() {
     const char *selectTablesOutputFileEnv = DbConnection::getSelectTablesFilePath();
     const char *selectQueryFileNameEnv = DbConnection::getSelectQueryFilePath();
-    PGconn* connection = DbConnection::getConnection();
+
+    const DbConnection dbConnection = DbConnection();
+    PGconn* connection = dbConnection.getConnection();
 
     if (connection == nullptr || selectTablesOutputFileEnv == nullptr || selectQueryFileNameEnv == nullptr)
         return 1;
@@ -39,13 +41,11 @@ int main() {
 
     // database_handler.EXECUTE_SQL_QUERY();
 
-    // database_handler.SELECT_ALL_SQL_QUERY(tableName, selectQueryFileNameEnv);
+    database_handler.SELECT_ALL_SQL_QUERY(tableName, selectQueryFileNameEnv);
 
     // database_handler.SELECT_COLUMNS_SQL_QUERY(tableName, selectQueryFileNameEnv);
 
-    database_handler.SELECT_ALL_TABLES_SQL_QUERY(selectTablesOutputFileEnv);
-
-    PQfinish(connection);
+    // database_handler.SELECT_ALL_TABLES_SQL_QUERY(selectTablesOutputFileEnv);
 
     return 0;
 }

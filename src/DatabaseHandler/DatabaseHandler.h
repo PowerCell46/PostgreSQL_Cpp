@@ -12,8 +12,10 @@ class DatabaseHandler {
     // Write to a file a SELECT query result
     static int fileWriteSelectQueryResult(const std::string &outputFileNameEnv, const PGresult *queryResult);
 
+    // Abstract method for reading table and column names
     static std::string readDatabaseIdentifier(const std::string &identifierType);
 
+    // Custom authentication
     bool validateUserCredentials() const;
 
 public:

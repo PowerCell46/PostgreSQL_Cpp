@@ -4,8 +4,8 @@
 
 
 class SHA256 {
-    static std::vector<uint8_t> padMessage(const std::string& input);
+    static std::vector<uint8_t> padMessage(const std::string &input);
 
 public:
-    static std::string hash(const std::string& input);
+    static std::string hash(const std::string &input);
 };

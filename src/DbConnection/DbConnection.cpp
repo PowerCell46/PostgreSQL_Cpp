@@ -12,7 +12,12 @@
 #define SELECT_OUTPUT_FILE_ENV "SELECT_OUTPUT_FILE"
 
 
-PGconn *DbConnection::getConnection() {
+DbConnection::~DbConnection() {
+    if (this->connection != nullptr)
+        PQfinish(connection);
+}
+
+DbConnection::DbConnection() {
     const char *userEnv = std::getenv(POSTGRE_SQL_ADMIN_ENV_NAME);
     const char *passEnv = std::getenv(POSTGRE_SQL_ADMIN_ENV_PASS);
 
@@ -20,7 +25,7 @@ PGconn *DbConnection::getConnection() {
         std::cerr
                 << "Error: Environment variables " << POSTGRE_SQL_ADMIN_ENV_NAME << " or "
                 << POSTGRE_SQL_ADMIN_ENV_PASS << " are not set.\n";
-        return nullptr;
+        return;
     }
 
     const std::string connectionString =
@@ -29,8 +34,6 @@ PGconn *DbConnection::getConnection() {
             std::string("&user=") + std::string(userEnv) +
             std::string("&password=") + std::string(passEnv);
 
-    // Connection
-    //***************************************************************//
     PGconn *connection = PQconnectdb(connectionString.c_str());
 
     if (PQstatus(connection) != CONNECTION_OK) {
@@ -38,10 +41,14 @@ PGconn *DbConnection::getConnection() {
         std::cout << "Connection to Database failed: " << PQerrorMessage(connection) << '\n';
         PQfinish(connection);
 
-        return nullptr;
+        return;
     }
 
-    return connection;
+    this->connection = connection;
+}
+
+PGconn *DbConnection::getConnection() const {
+    return this->connection;
 }
 
 const char *DbConnection::getSelectTablesFilePath() {
