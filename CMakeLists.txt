@@ -41,7 +41,9 @@ add_executable(ExamplePostgreSQL main.cpp
         DatabaseHandler.cpp
         DatabaseHandler.h
         SHA256.cpp
-        SHA256.h)
+        SHA256.h
+        DbConnection.cpp
+        DbConnection.h)
 
 # Link the executable `ExamplePostgreSQL` with the PostgreSQL library
 target_link_libraries(ExamplePostgreSQL ${PostgreSQL_LIBRARIES})
